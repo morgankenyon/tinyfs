@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fado.Core", "src\Fado.Core.fsproj", "{561DC9D1-4B10-421E-96F1-AD7EBD0B86D0}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fado.Test", "test\Fado.Test.fsproj", "{8F12A087-4612-4D0A-AC67-08573EA70854}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fado.Cli", "cli\Fado.Cli.fsproj", "{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{561DC9D1-4B10-421E-96F1-AD7EBD0B86D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{561DC9D1-4B10-421E-96F1-AD7EBD0B86D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{561DC9D1-4B10-421E-96F1-AD7EBD0B86D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{561DC9D1-4B10-421E-96F1-AD7EBD0B86D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F12A087-4612-4D0A-AC67-08573EA70854}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F12A087-4612-4D0A-AC67-08573EA70854}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F12A087-4612-4D0A-AC67-08573EA70854}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F12A087-4612-4D0A-AC67-08573EA70854}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

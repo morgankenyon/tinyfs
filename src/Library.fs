@@ -1,0 +1,1 @@
+﻿module Fado.Core.Library

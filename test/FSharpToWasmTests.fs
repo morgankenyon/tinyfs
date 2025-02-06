@@ -13,9 +13,10 @@ let ``Can walk AST`` () =
 //    FSharpToWasm.walkCheckedTree ()
 //    Assert.True(true)
 
-[<Fact>]
-let ``Can walk simple typed AST`` () =
-    let result =
-        FSharpToWasm.walkInput ("let x = 1")
+[<Theory>]
+[<InlineData("let x = 1", "x = 1")>]
+[<InlineData("let x = 1 + 2", "x = 1 + 2")>]
+let ``Can walk simple typed AST`` input expected =
+    let result = FSharpToWasm.walkInput input
     let str = WasmAst.printExpression result
-    Assert.Equal("x = 1", str)
+    Assert.Equal(expected, str)

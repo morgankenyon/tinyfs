@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="TypedWalkthrough.fs" />
     <Compile Include="WalkThroughTree.fs" />
     <Compile Include="WasmAst.fs" />
     <Compile Include="FSharpToWasm.fs" />

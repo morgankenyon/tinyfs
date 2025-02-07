@@ -92,9 +92,11 @@ let rec visitPattern depth pat =
 
 let visitBinding depth (binding: SynBinding) =
     let indent = String.replicate depth "  "
-    printfn "%sBinding:" indent
-    visitPattern (depth + 1) binding.Patterns.Head
-    visitExpr (depth + 1) binding.Expression
+    match binding with
+    | SynBinding(_, _, _, _, _, _, _, headPat, _, expr, _, _, _) ->
+        printfn "%sBinding:" indent
+        visitPattern (depth + 1) headPat
+        visitExpr (depth + 1) expr
 
 let visitDecl depth decl =
     let indent = String.replicate depth "  "
@@ -107,8 +109,12 @@ let visitDecl depth decl =
     | SynModuleDecl.Types(types, _) ->
         printfn "%sType Declaration" indent
         for typ in types do
-            printfn "%sType: %s" (String.replicate (depth + 1) "  ") 
-                (match typ.Name with SynIdent(ident, _) -> ident.idText)
+            match typ with
+            | SynTypeDefn(typeInfo, _, _, _, _, _) ->
+                match typeInfo with
+                | SynComponentInfo(_, _, _, longId, _, _, _, _) ->
+                    printfn "%sType: %s" (String.replicate (depth + 1) "  ") 
+                        (longId.Head.idText)
             
     | _ ->
         printfn "%sOther Declaration: %A" indent decl
@@ -116,13 +122,20 @@ let visitDecl depth decl =
 // Walk through typed AST (from checkResults)
 let visitTypedTree (typedTree: FSharpImplementationFileContents) =
     printfn "\nTyped Tree Walk:"
-    for entity in typedTree.Declarations do
-        printfn "Entity: %s" entity.DisplayName
+    for decl in typedTree.Declarations do
+        match decl with
+        | FSharpImplementationFileDeclaration.Entity (entity, declarations) ->
+            ()
+        | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue (value, curriedArgs, body) ->
+            ()
+        | FSharpImplementationFileDeclaration.InitAction (action) ->
+            ()
+        //printfn "Entity: %s" entity.DisplayName
         
-        // Look at values (let bindings)
-        for value in entity.FunctionOrValues do
-            printfn "  Value: %s" value.DisplayName
-            printfn "    Type: %s" (value.FullType.ToString())
+        //// Look at values (let bindings)
+        //for value in entity.FunctionOrValues do
+        //    printfn "  Value: %s" value.DisplayName
+        //    printfn "    Type: %s" (value.FullType.ToString())
 
 // Example usage
 printfn "Untyped AST Walk:"
@@ -137,8 +150,12 @@ match parseResults.ParseTree with
     printfn "Could not get parse tree"
 
 // Walk typed tree
-match checkResults.ImplementationFile with
-| Some typedTree ->
-    visitTypedTree typedTree
-| None ->
+match checkResults with
+| FSharpCheckFileAnswer.Succeeded typedTree ->
+    match typedTree.ImplementationFile with
+    | Some implFile ->
+        visitTypedTree implFile
+        ()
+    | None -> ()
+| FSharpCheckFileAnswer.Aborted ->
     printfn "Could not get typed tree"

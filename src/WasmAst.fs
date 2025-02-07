@@ -11,6 +11,7 @@ type Identifier =
     }
 type Expression =
     | IdentExpr of ident: Identifier
+    | Value of literal: Literal
 //type BinOp = | Plus
 
 let printLiteral (lit: Literal) =
@@ -23,3 +24,6 @@ let printExpression (expr: Expression) =
     | IdentExpr ident ->
         let identStr = printLiteral ident.Literal
         sprintf "%s = %s" ident.Name identStr
+    | Value literal ->
+        let identStr = printLiteral literal
+        identStr

@@ -205,7 +205,10 @@ let rec visitExpr f (e:FSharpExpr): Expression list =
     //| FSharpExprPatterns.Application(funcExpr, typeArgs, argExprs) -> 
     //    visitExpr f funcExpr; visitExprs f argExprs
     | FSharpExprPatterns.Call(objExprOpt, memberOrFunc, typeArgs1, typeArgs2, argExprs) -> 
-        visitObjArg f objExprOpt; visitExprs f argExprs
+        let objExpr = visitObjArg f objExprOpt
+        let argsExpr = visitExprs f argExprs
+        //let memberOfFuncExpr = visitExprs memberOrFunc
+        argsExpr
     //| FSharpExprPatterns.Coerce(targetType, inpExpr) -> 
     //    visitExpr f inpExpr
     //| FSharpExprPatterns.FastIntegerForLoop(startExpr, limitExpr, consumeExpr, isUp, _, _) -> 
@@ -297,12 +300,8 @@ let rec visitExpr f (e:FSharpExpr): Expression list =
             let lit = 
                 Int32.Parse(constValueObj.ToString())
                 |> IntLiteral
-                
-            let iden = 
-                {
-                    
-                }
-            [(IdentExpr lit)]
+            let expr = Value lit
+            [expr]
             //let ident = { Name = }
         | _ -> failwith((sprintf "unsupported type: %s" constType.BasicQualifiedName))
     //| FSharpExprPatterns.Value(valueToGet) -> 
@@ -328,13 +327,16 @@ and visitObjArg f objOpt : Expression list =
 let buildIdentifierExpression f (v: FSharpMemberOrFunctionOrValue) (e: FSharpExpr) =
     //let vall = visitExpr f v
     let name = v.DisplayName
-    let lit = visitExpr f e
-    let ident = 
-        {
-            Name = name
-            Literal = lit
-        }
-    ident
+    let expr = visitExpr f e
+    match expr.Head with
+    | Value literal ->
+        let ident = 
+            {
+                Name = name
+                Literal = literal
+            }
+        IdentExpr ident
+    | _ -> failwith "unexpected expression type"
     
 let rec visitFileDecl f (mem: FSharpImplementationFileDeclaration) = 
     match mem with 
@@ -342,7 +344,7 @@ let rec visitFileDecl f (mem: FSharpImplementationFileDeclaration) =
             if vs.Length = 0 
             then
                 let result = buildIdentifierExpression f v e
-                IdentExpr result
+                result
             else failwith "functions are unsupported right now"
         | _ -> failwith "unexpected"
     //FSharpImplementationFileDeclaration.MemberOrFunctionOrValue

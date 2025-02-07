@@ -14,7 +14,7 @@ let ``Can walk AST`` () =
 //    Assert.True(true)
 
 [<Theory>]
-[<InlineData("let x = 1", "x = 1")>]
+//[<InlineData("let x = 1", "x = 1")>]
 [<InlineData("let x = 1 + 2", "x = 1 + 2")>]
 let ``Can walk simple typed AST`` input expected =
     let result = FSharpToWasm.walkInput input

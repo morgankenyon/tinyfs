@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="WalkThroughTreeTests.fs" />
     <Compile Include="FSharpToWasmTests.fs" />
+    <Compile Include="FSharpToWatTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -9,6 +9,11 @@ type Identifier =
         Name : string
         Literal : Literal
     }
+type NumberKind =
+    | Int32
+type WatType =
+    | Any
+    | Number of kind: NumberKind
 type Expression =
     | IdentExpr of ident: Identifier
     | Value of literal: Literal

@@ -23,6 +23,7 @@ type Expr =
 type WatType =
     | Any
     | Number of kind: NumberKind
+    | Array
 type ModuleDecl =
     {
         Name: string

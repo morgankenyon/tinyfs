@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Literals.fs" />
     <Compile Include="WatAst.fs" />
     <Compile Include="FSharpToWat.fs" />
     <Compile Include="TypedWalkthrough.fs" />

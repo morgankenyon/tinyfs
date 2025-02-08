@@ -21,6 +21,27 @@ let parseAndCheckSingleFile (input: string) =
     checker.ParseAndCheckProject(projOptions) 
     |> Async.RunSynchronously
 
+let numberTypes =
+    dict
+        [
+            //Types.int8, Int8
+            //Types.uint8, UInt8
+            //Types.int16, Int16
+            //Types.uint16, UInt16
+            Literals.int32, Int32
+            //Types.uint32, UInt32
+            //Types.int64, Int64
+            //Types.uint64, UInt64
+            //Types.int128, Int128
+            //Types.uint128, UInt128
+            //Types.nativeint, NativeInt
+            //Types.unativeint, UNativeInt
+            //Types.float16, Float16
+            //Types.float32, Float32
+            //Types.float64, Float64
+            //Types.decimal, Decimal
+            //Types.bigint, BigInt
+        ]
 let isAttachMembersEntity (ent: FSharpEntity) =
     not (ent.IsFSharpModule || ent.IsInterface)
     && (
@@ -84,70 +105,115 @@ let rec nonAbbreviatedType (t: FSharpType) : FSharpType =
     else
         t
 let inline (|NonAbbreviatedType|) (t: FSharpType) = nonAbbreviatedType t
+let (|DicContains|_|) (dic: System.Collections.Generic.IDictionary<'k, 'v>) key =
+    let success, value = dic.TryGetValue key
+
+    if success then
+        Some value
+    else
+        None
+let rec nonAbbreviatedDefinition (ent: FSharpEntity) : FSharpEntity =
+    if ent.IsFSharpAbbreviation then
+        let t = ent.AbbreviatedType
+
+        if t.HasTypeDefinition && t.TypeDefinition <> ent then
+            nonAbbreviatedDefinition t.TypeDefinition
+        else
+            ent
+    else
+        ent
+let tryArrayFullName (ent: FSharpEntity) =
+    if ent.IsArrayType then
+        let rank =
+            match ent.ArrayRank with
+            | rank when rank > 1 -> "`" + string<int> rank
+            | _ -> ""
+
+        Some("System.Array" + rank)
+    else
+        None
+let FullName(ent: FSharpEntity) : string =
+    let ent = nonAbbreviatedDefinition ent
+
+    match tryArrayFullName ent with
+    | Some fullName -> fullName
+    | None when ent.IsNamespace || ent.IsByRef ->
+        match ent.Namespace with
+        | Some ns -> ns + "." + ent.CompiledName
+        | None -> ent.CompiledName
+#if !FABLE_COMPILER
+    | None when ent.IsProvided -> ent.LogicalName
+#endif
+    | None ->
+        match ent.TryFullName with
+        | Some n -> n
+        | None -> ent.LogicalName
 
 let makeTypeFromDef withConstraints (genArgs: IList<FSharpType>) (tdef: FSharpEntity) : WatAst.WatType=
-        //if tdef.IsArrayType then
+    if tdef.IsArrayType then
+        //Fable.Array(
+        //    makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head,
+        //    Fable.MutableArray
+        //)
+        WatType.Array
+    //elif tdef.IsDelegate then
+    //    makeTypeFromDelegate withConstraints ctxTypeArgs genArgs tdef
+    //elif tdef.IsEnum then
+    //    // F# seems to include a field with this name in the underlying type
+    //    let numberKind =
+    //        tdef.FSharpFields
+    //        |> Seq.tryPick (fun fi ->
+    //            match fi.Name with
+    //            | "value__" when fi.FieldType.HasTypeDefinition ->
+    //                match FsEnt.FullName fi.FieldType.TypeDefinition with
+    //                | DicContains numberTypes kind -> Some kind
+    //                | _ -> None
+    //            | _ -> None
+    //        )
+    //        |> Option.defaultValue Int32
+
+    //    let info = FsEnt.Ref tdef |> Fable.NumberInfo.IsEnum
+    //    Fable.Number(numberKind, info)
+    else
+        match FullName tdef with
+        // Fable "primitives"
+        //| Types.object -> Fable.Any
+        //| Types.unit -> Fable.Unit
+        //| Types.bool -> Fable.Boolean
+        //| Types.char -> Fable.Char
+        //| Types.string -> Fable.String
+        //| Types.regex -> Fable.Regex
+        //| Types.type_ -> Fable.MetaType
+        //| Types.valueOption ->
+        //    Fable.Option(makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head, true)
+        //| Types.option ->
+        //    Fable.Option(makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head, false)
+        //| Types.resizeArray ->
         //    Fable.Array(
         //        makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head,
-        //        Fable.MutableArray
+        //        Fable.ResizeArray
         //    )
-        //elif tdef.IsDelegate then
-        //    makeTypeFromDelegate withConstraints ctxTypeArgs genArgs tdef
-        //elif tdef.IsEnum then
-        //    // F# seems to include a field with this name in the underlying type
-        //    let numberKind =
-        //        tdef.FSharpFields
-        //        |> Seq.tryPick (fun fi ->
-        //            match fi.Name with
-        //            | "value__" when fi.FieldType.HasTypeDefinition ->
-        //                match FsEnt.FullName fi.FieldType.TypeDefinition with
-        //                | DicContains numberTypes kind -> Some kind
-        //                | _ -> None
-        //            | _ -> None
-        //        )
-        //        |> Option.defaultValue Int32
+        //| Types.list ->
+        //    makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs
+        //    |> List.head
+        //    |> Fable.List
+        | DicContains numberTypes kind -> WatType.Number(kind)
+        //| DicContains numbersWithMeasure kind ->
+        //    let info = getMeasureFullName genArgs |> Fable.NumberInfo.IsMeasure
 
-        //    let info = FsEnt.Ref tdef |> Fable.NumberInfo.IsEnum
-        //    Fable.Number(numberKind, info)
-        //else
-        //    match FsEnt.FullName tdef with
-        //    // Fable "primitives"
-        //    | Types.object -> Fable.Any
-        //    | Types.unit -> Fable.Unit
-        //    | Types.bool -> Fable.Boolean
-        //    | Types.char -> Fable.Char
-        //    | Types.string -> Fable.String
-        //    | Types.regex -> Fable.Regex
-        //    | Types.type_ -> Fable.MetaType
-        //    | Types.valueOption ->
-        //        Fable.Option(makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head, true)
-        //    | Types.option ->
-        //        Fable.Option(makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head, false)
-        //    | Types.resizeArray ->
-        //        Fable.Array(
-        //            makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head,
-        //            Fable.ResizeArray
-        //        )
-        //    | Types.list ->
-        //        makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs
-        //        |> List.head
-        //        |> Fable.List
-        //    | DicContains numberTypes kind -> Fable.Number(kind, Fable.NumberInfo.Empty)
-        //    | DicContains numbersWithMeasure kind ->
-        //        let info = getMeasureFullName genArgs |> Fable.NumberInfo.IsMeasure
+        //    Fable.Number(kind, info)
+        //| DicContains runtimeTypesWithMeasure choice ->
+        //    match choice with
+        //    | Choice1Of2 t -> t
+        //    | Choice2Of2 fullName -> makeRuntimeTypeWithMeasure genArgs fullName
+        //| fullName when tdef.IsMeasure -> Fable.Measure fullName
+        //| _ when hasAttrib Atts.stringEnum tdef.Attributes && Compiler.Language <> TypeScript -> Fable.String
+        //| _ ->
+        //    let genArgs = makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs
 
-        //        Fable.Number(kind, info)
-        //    | DicContains runtimeTypesWithMeasure choice ->
-        //        match choice with
-        //        | Choice1Of2 t -> t
-        //        | Choice2Of2 fullName -> makeRuntimeTypeWithMeasure genArgs fullName
-        //    | fullName when tdef.IsMeasure -> Fable.Measure fullName
-        //    | _ when hasAttrib Atts.stringEnum tdef.Attributes && Compiler.Language <> TypeScript -> Fable.String
-        //    | _ ->
-        //        let genArgs = makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs
-
-        //        Fable.DeclaredType(FsEnt.Ref tdef, genArgs)
-        WatAst.WatType.Any
+        //    Fable.DeclaredType(FsEnt.Ref tdef, genArgs)
+        | _ -> failwith "Unexpected type makeTypeFromDef"
+    //WatAst.WatType.Any
 let rec makeTypeWithConstraints withConstraints (NonAbbreviatedType t) =
     let typ =
         // Generic parameter (try to resolve for inline functions)

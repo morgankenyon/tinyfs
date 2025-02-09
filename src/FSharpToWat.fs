@@ -7,8 +7,318 @@ open FSharp.Compiler.Text
 open System.IO
 open System.Collections.Generic
 open WatAst
+open System
 
 let checker = FSharpChecker.Create(keepAssemblyContents=true)
+type ParamTypes = WatType list
+
+let private hashToString (i: int) =
+    if i < 0 then
+        "Z" + (abs i).ToString("X")
+    else
+        i.ToString("X")
+// From Fable, then https://stackoverflow.com/a/37449594
+let private combineHashCodes (hashes: int seq) =
+    let hashes = Seq.toArray hashes
+
+    if hashes.Length = 0 then
+        0
+    else
+        hashes |> Array.reduce (fun h1 h2 -> ((h1 <<< 5) + h1) ^^^ h2)
+// F# hash function gives different results in different runs
+// Taken from Fable OverloadSuffix.fs. Possible variant in https://stackoverflow.com/a/1660613
+let private stringHash (s: string) =
+    let mutable h = 5381
+
+    for i = 0 to s.Length - 1 do
+        h <- (h * 33) ^^^ (int s[i])
+
+    h
+let jsKeywords =
+    System.Collections.Generic.HashSet
+        [
+            // Keywords: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#Keywords
+            "break"
+            "case"
+            "catch"
+            "class"
+            "const"
+            "continue"
+            "debugger"
+            "default"
+            "delete"
+            "do"
+            "else"
+            "export"
+            "extends"
+            "finally"
+            "for"
+            "function"
+            "if"
+            "import"
+            "in"
+            "instanceof"
+            "new"
+            "return"
+            "super"
+            "switch"
+            "this"
+            "throw"
+            "try"
+            "typeof"
+            "var"
+            "void"
+            "while"
+            "with"
+            "yield"
+
+            "enum"
+
+            "implements"
+            "interface"
+            "let"
+            "package"
+            "private"
+            "protected"
+            "public"
+            "static"
+
+            "await"
+
+            "null"
+            "true"
+            "false"
+            "arguments"
+            "get"
+            "set"
+
+            // Standard built-in objects: https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects
+            "Infinity"
+            "NaN"
+            "undefined"
+            "globalThis"
+
+            "eval"
+            "uneval"
+            "isFinite"
+            "isNaN"
+            "parseFloat"
+            "parseInt"
+            "decodeURI"
+            "decodeURIComponent"
+            "encodeURI"
+            "encodeURIComponent"
+
+            "Object"
+            "Function"
+            "Boolean"
+            "Symbol"
+
+            "Error"
+            "AggregateError"
+            "EvalError"
+            "InternalError"
+            "RangeError"
+            "ReferenceError"
+            "SyntaxError"
+            "TypeError"
+            "URIError"
+
+            "Number"
+            "BigInt"
+            "Math"
+            "Date"
+
+            "String"
+            "RegExp"
+
+            "Array"
+            "Int8Array"
+            "Uint8Array"
+            "Uint8ClampedArray"
+            "Int16Array"
+            "Uint16Array"
+            "Int32Array"
+            "Uint32Array"
+            "Float32Array"
+            "Float64Array"
+            "BigInt64Array"
+            "BigUint64Array"
+
+            "Map"
+            "Set"
+            "WeakMap"
+            "WeakSet"
+
+            "ArrayBuffer"
+            "SharedArrayBuffer"
+            "Atomics"
+            "DataView"
+            "JSON"
+
+            "Promise"
+            "Generator"
+            "GeneratorFunction"
+            "AsyncFunction"
+
+            "Reflect"
+            "Proxy"
+
+            "Intl"
+            "WebAssembly"
+
+            // DOM interfaces (omitting SVG): https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model
+            "Attr"
+            "CDATASection"
+            "CharacterData"
+            "ChildNode"
+            "Comment"
+            "CustomEvent"
+            "Document"
+            "DocumentFragment"
+            "DocumentType"
+            "DOMError"
+            "DOMException"
+            "DOMImplementation"
+            "DOMString"
+            "DOMTimeStamp"
+            "DOMStringList"
+            "DOMTokenList"
+            "Element"
+            "Event"
+            "EventTarget"
+            "HTMLCollection"
+            "MutationObserver"
+            "MutationRecord"
+            "NamedNodeMap"
+            "Node"
+            "NodeFilter"
+            "NodeIterator"
+            "NodeList"
+            "NonDocumentTypeChildNode"
+            "ParentNode"
+            "ProcessingInstruction"
+            "Selection"
+            "Range"
+            "Text"
+            "TextDecoder"
+            "TextEncoder"
+            "TimeRanges"
+            "TreeWalker"
+            "URL"
+            "Window"
+            "Worker"
+            "XMLDocument"
+
+            // Other JS global and special objects/functions. See #258, #1358
+            "console"
+            "window"
+            "document"
+            "global"
+            "fetch"
+        ]
+let getNumberFullName kind =
+    match kind with
+    | Int32 -> Literals.int32
+        //function
+        //| Int8 -> Types.int8
+        //| UInt8 -> Types.uint8
+        //| Int16 -> Types.int16
+        //| UInt16 -> Types.uint16
+        //| Int32 -> Types.int32
+        //| UInt32 -> Types.uint32
+        //| Int64 -> Types.int64
+        //| UInt64 -> Types.uint64
+        //| Int128 -> Types.int128
+        //| UInt128 -> Types.uint128
+        //| NativeInt -> Types.nativeint
+        //| UNativeInt -> Types.unativeint
+        //| Float16 -> Types.float16
+        //| Float32 -> Types.float32
+        //| Float64 -> Types.float64
+        //| Decimal -> Types.decimal
+        //| BigInt -> Types.bigint
+let rec private getTypeFastFullName (genParams: IDictionary<_, _>) (t: WatType) =
+    match t with
+    //| Fable.Measure fullname -> fullname
+    //| Fable.GenericParam(name, isMeasure, constraints) ->
+    //    if isMeasure then
+    //        "measure"
+    //    else
+    //        match genParams.TryGetValue(name) with
+    //        | true, i -> i
+    //        | false, _ -> constraints |> List.map (getConstraintHash genParams) |> String.concat ","
+    //| Fable.Tuple(genArgs, isStruct) ->
+    //    let genArgs =
+    //        genArgs |> Seq.map (getTypeFastFullName genParams) |> String.concat " * "
+
+    //    if isStruct then
+    //        "struct " + genArgs
+    //    else
+    //        genArgs
+    //| Fable.Array(genArg, kind) ->
+    //    let name =
+    //        match kind with
+    //        | Fable.ResizeArray -> "array"
+    //        | Fable.MutableArray -> "resizearray"
+    //        | Fable.ImmutableArray -> "immutablearray"
+
+    //    getTypeFastFullName genParams genArg + " " + name
+    //| Fable.List genArg -> getTypeFastFullName genParams genArg + " list"
+    //| Fable.Option(genArg, isStruct) ->
+    //    (if isStruct then
+    //         "struct "
+    //     else
+    //         "")
+    //    + (getTypeFastFullName genParams genArg)
+    //    + " option"
+    //| Fable.LambdaType(argType, returnType) ->
+    //    [ argType; returnType ]
+    //    |> List.map (getTypeFastFullName genParams)
+    //    |> String.concat " -> "
+    //// TODO: Use Func` instead?
+    //| Fable.DelegateType(argTypes, returnType) ->
+    //    argTypes @ [ returnType ]
+    //    |> List.map (getTypeFastFullName genParams)
+    //    |> String.concat " -> "
+    //| Fable.AnonymousRecordType(fieldNames, genArgs, isStruct) ->
+    //    let fields =
+    //        Seq.zip fieldNames genArgs
+    //        |> Seq.map (fun (key, typ) -> key + " : " + getTypeFastFullName genParams typ)
+    //        |> String.concat "; "
+
+    //    (if isStruct then
+    //         "struct "
+    //     else
+    //         "")
+    //    + "{|"
+    //    + fields
+    //    + "|}"
+    //| Fable.DeclaredType(tdef, genArgs) ->
+    //    let genArgs = genArgs |> Seq.mapToList (getTypeFastFullName genParams)
+    //    // Not sure why, but when precompiling F# changes measure types to MeasureProduct<'M, MeasureOne>
+    //    match tdef.FullName, genArgs with
+    //    | Types.measureProduct2, [ measure; Types.measureOne ] ->
+    //        // TODO: generalize it to support aggregate units such as <m/s> or more complex
+    //        measure
+    //    | _ ->
+    //        let genArgs = String.concat "," genArgs
+
+    //        let genArgs =
+    //            if genArgs = "" then
+    //                ""
+    //            else
+    //                "[" + genArgs + "]"
+
+    //        tdef.FullName + genArgs
+    //| Fable.MetaType -> Types.type_
+    //| Fable.Any -> Types.object
+    //| Fable.Unit -> Types.unit
+    //| Fable.Boolean -> Types.bool
+    //| Fable.Char -> Types.char
+    //| Fable.String -> Types.string
+    //| Fable.Regex -> Types.regex
+    | WatType.Number(kind) -> getNumberFullName kind
 
 let parseAndCheckSingleFile (input: string) = 
     let file = Path.ChangeExtension(System.IO.Path.GetTempFileName(), "fsx")  
@@ -20,7 +330,48 @@ let parseAndCheckSingleFile (input: string) =
 
     checker.ParseAndCheckProject(projOptions) 
     |> Async.RunSynchronously
+let private getHashPrivate (paramTypes: ParamTypes) genParams =
+    paramTypes
+    |> List.map (getTypeFastFullName genParams >> stringHash)
+    |> combineHashCodes
+    |> hashToString
 
+let hasEmptyOverloadSuffix (curriedParamTypes: ParamTypes) =
+    // Don't use overload suffix for members without arguments
+    match curriedParamTypes with
+    | [] -> true
+    | [ WatType.Unit ] -> true
+    | _ -> false
+
+let getHash (entityGenericParams: string list) (curriedParamTypeGroups: WatType list list) =
+    match curriedParamTypeGroups with
+    | [ paramTypes ] ->
+        if hasEmptyOverloadSuffix paramTypes then
+            ""
+        else
+            // Generics can have different names in signature
+            // and implementation files, use the position instead
+            let genParams =
+                entityGenericParams |> List.mapi (fun i p -> p, string<int> i) |> dict
+
+            getHashPrivate paramTypes genParams
+    // Members with curried params cannot be overloaded in F#
+    // TODO: Also private methods defined with `let` cannot be overloaded
+    // but I don't know how to identify them in the AST
+    | _ -> ""
+
+/// Used for extension members
+let getExtensionHash (curriedParamTypeGroups: WatType list list) =
+    match curriedParamTypeGroups with
+    | [ paramTypes ] ->
+        if hasEmptyOverloadSuffix paramTypes then
+            ""
+        else
+            // Type resolution in extension member seems to be different
+            // and doesn't take generics into account
+            dict [] |> getHashPrivate paramTypes
+    // Members with curried params cannot be overloaded in F#
+    | _ -> ""
 let numberTypes =
     dict
         [
@@ -28,7 +379,7 @@ let numberTypes =
             //Types.uint8, UInt8
             //Types.int16, Int16
             //Types.uint16, UInt16
-            Literals.int32, Int32
+            Literals.int32, NumberKind.Int32
             //Types.uint32, UInt32
             //Types.int64, Int64
             //Types.uint64, UInt64
@@ -104,14 +455,7 @@ let rec nonAbbreviatedType (t: FSharpType) : FSharpType =
             abbr
     else
         t
-let inline (|NonAbbreviatedType|) (t: FSharpType) = nonAbbreviatedType t
-let (|DicContains|_|) (dic: System.Collections.Generic.IDictionary<'k, 'v>) key =
-    let success, value = dic.TryGetValue key
 
-    if success then
-        Some value
-    else
-        None
 let rec nonAbbreviatedDefinition (ent: FSharpEntity) : FSharpEntity =
     if ent.IsFSharpAbbreviation then
         let t = ent.AbbreviatedType
@@ -122,6 +466,15 @@ let rec nonAbbreviatedDefinition (ent: FSharpEntity) : FSharpEntity =
             ent
     else
         ent
+let inline (|NonAbbreviatedType|) (t: FSharpType) = nonAbbreviatedType t
+let (|DicContains|_|) (dic: System.Collections.Generic.IDictionary<'k, 'v>) key =
+    let success, value = dic.TryGetValue key
+
+    if success then
+        Some value
+    else
+        None
+
 let tryArrayFullName (ent: FSharpEntity) =
     if ent.IsArrayType then
         let rank =
@@ -132,6 +485,29 @@ let tryArrayFullName (ent: FSharpEntity) =
         Some("System.Array" + rank)
     else
         None
+
+//let rec nonAbbreviatedDefinition (ent: FSharpEntity) : FSharpEntity =
+//    if ent.IsFSharpAbbreviation then
+//        let t = ent.AbbreviatedType
+
+//        if t.HasTypeDefinition && t.TypeDefinition <> ent then
+//            nonAbbreviatedDefinition t.TypeDefinition
+//        else
+//            ent
+//    else
+//        ent
+
+let ensureFsExtension (path: string) =
+    if path.EndsWith(".fsi", StringComparison.Ordinal) then
+        path.Substring(0, path.Length - 1)
+    else
+        path
+let normalizePath (path: string) = path.Replace('\\', '/').TrimEnd('/')
+let normalizePathAndEnsureFsExtension (path: string) = normalizePath path |> ensureFsExtension
+let SourcePath(ent: FSharpEntity) =
+    let ent = nonAbbreviatedDefinition ent
+
+    ent.DeclarationLocation.FileName |> normalizePathAndEnsureFsExtension
 let FullName(ent: FSharpEntity) : string =
     let ent = nonAbbreviatedDefinition ent
 
@@ -148,8 +524,32 @@ let FullName(ent: FSharpEntity) : string =
         match ent.TryFullName with
         | Some n -> n
         | None -> ent.LogicalName
+let Ref(ent: FSharpEntity) : WatAst.EntityRef =
+    let ent = nonAbbreviatedDefinition ent
 
-let makeTypeFromDef withConstraints (genArgs: IList<FSharpType>) (tdef: FSharpEntity) : WatAst.WatType=
+    let path =
+        match ent.Assembly.FileName with
+        | Some asmPath ->
+            let dllName = Path.GetFileName(asmPath)
+            let dllName = dllName.Substring(0, dllName.Length - 4) // Remove .dll extension
+
+            match dllName with
+            // When compiling with netcoreapp target, netstandard only contains redirects
+            // We can find the actual assembly name from the entity qualified name
+            | "netstandard" -> ent.QualifiedName.Split(',').[1].Trim() |> EntityPath.CoreAssemblyName
+            | Literals.fablePrecompile ->
+                let sourcePath = SourcePath ent
+                EntityPath.PrecompiledLib(sourcePath, normalizePath asmPath)
+            //| dllName when Compiler.CoreAssemblyNames.Contains(dllName) -> Fable.CoreAssemblyName dllName
+            | _ -> normalizePath asmPath |> EntityPath.AssemblyPath
+        | None -> SourcePath ent |> EntityPath.SourcePath
+
+    {
+        FullName = FullName ent
+        Path = path
+    }
+
+let makeTypeFromDef withConstraints (genArgs: IList<FSharpType>) (tdef: FSharpEntity) : WatAst.WatType =
     if tdef.IsArrayType then
         //Fable.Array(
         //    makeTypeGenArgsWithConstraints withConstraints ctxTypeArgs genArgs |> List.head,
@@ -269,6 +669,185 @@ let rec makeTypeWithConstraints withConstraints (NonAbbreviatedType t) =
 let makeType t =
     makeTypeWithConstraints true t
 
+let mapToList (f: 'a -> 'b) (xs: 'a seq) : 'b list =
+    ([], xs) ||> Seq.fold (fun li x -> (f x) :: li) |> List.rev
+//let private getEntityMangledName trimRootModule (ent: EntityRef) =
+//    let fullName = ent.FullName
+
+//    match trimRootModule, ent.Path with
+//    | TrimRootModule com, (Fable.SourcePath sourcePath | WatAst.PrecompiledLib(sourcePath, _)) ->
+//        let rootMod, _ = com.GetRootModule(sourcePath)
+
+//        if fullName.StartsWith(rootMod, StringComparison.Ordinal) then
+//            fullName.Substring(rootMod.Length).TrimStart('.')
+//        else
+//            fullName
+//    // Ignore entities for which we don't have implementation file data
+//    | TrimRootModule _, (Fable.AssemblyPath _ | Fable.CoreAssemblyName _)
+//    | NoTrimRootModule, _ -> fullName
+let private getMemberMangledName (memb: FSharpMemberOrFunctionOrValue) =
+    //if memb.IsExtensionMember then
+    //    let overloadSuffix =
+    //        memb.CurriedParameterGroups
+    //        |> mapToList (mapToList (fun p -> makeType p.Type))
+    //        |> getExtensionHash
+
+    //    let entName =
+    //        FsEnt.Ref memb.ApparentEnclosingEntity |> getEntityMangledName NoTrimRootModule
+
+    //    entName, Naming.InstanceMemberPart(memb.CompiledName, overloadSuffix)
+    //else
+        //match memb.DeclaringEntity with
+        //| Some ent ->
+        //    let entRef = Ref ent
+        //    let entName = entRef.FullName
+        //    entName
+            //if ent.IsFSharpModule then
+            //    match trimRootModule, entName with
+            //    | TrimRootModule com, _ when com.Options.Language = Rust -> memb.CompiledName, Naming.NoMemberPart // module prefix for Rust
+            //    | _, "" -> memb.CompiledName, Naming.NoMemberPart
+            //    | _, moduleName -> moduleName, Naming.StaticMemberPart(memb.CompiledName, "")
+            //else
+            //    let overloadSuffix = getOverloadSuffixFrom ent memb
+
+            //    if memb.IsInstanceMember then
+            //        entName, Naming.InstanceMemberPart(memb.CompiledName, overloadSuffix)
+            //    else
+            //        // Special case of non-mangled static classes to easily expose methods with optional args, etc, to native code
+            //        // TODO: If entity is not mangled and Erase attribute is not present, raise warning
+            //        match Util.tryMangleAttribute ent.Attributes with
+            //        | Some false -> memb.CompiledName, Naming.NoMemberPart
+            //        | Some true
+                    //| None -> entName, Naming.StaticMemberPart(memb.CompiledName, overloadSuffix)
+        //| None -> 
+        memb.CompiledName//, Naming.NoMemberPart
+let cleanNameAsJsIdentifier (name: string) =
+    if name = ".ctor" then
+        "$ctor"
+    else
+        name.Replace('.', '_').Replace('`', '$')
+let isIdentChar index (c: char) =
+    let code = int c
+
+    c = '_'
+    || c = '$'
+    || (65 <= code && code <= 90) // a-z
+    || (97 <= code && code <= 122) // A-Z
+    // Digits are not allowed in first position, see #1397
+    || (index > 0 && 48 <= code && code <= 57) // 0-9
+    || Char.IsLetter c
+let hasIdentForbiddenChars (ident: string) =
+    let mutable found = false
+
+    for i = 0 to ident.Length - 1 do
+        found <- found || not (isIdentChar i ident.[i])
+
+    found
+let sanitizeIdentForbiddenCharsWith replace (ident: string) =
+    if hasIdentForbiddenChars ident then
+        Seq.init
+            ident.Length
+            (fun i ->
+                let c = ident.[i]
+
+                if isIdentChar i c then
+                    string<char> c
+                else
+                    replace c
+            )
+        |> String.Concat
+    else
+        ident
+let sanitizeIdentForbiddenChars (ident: string) =
+    ident
+    |> sanitizeIdentForbiddenCharsWith (fun c -> "$" + String.Format("{0:X}", int c).PadLeft(4, '0'))
+let private buildName sanitize name =
+    sanitize name
+let checkJsKeywords name =
+    if jsKeywords.Contains name then
+        name + "$"
+    else
+        name
+let preventConflicts conflicts originalName =
+    let rec check originalName n =
+        let name =
+            if n > 0 then
+                originalName + "_" + (string<int> n)
+            else
+                originalName
+
+        if not (conflicts name) then
+            name
+        else
+            check originalName (n + 1)
+
+    check originalName 0
+let sanitizeIdent conflicts name =
+    // Replace Forbidden Chars
+    buildName sanitizeIdentForbiddenChars name
+    |> checkJsKeywords
+    // Check if it already exists
+    |> preventConflicts conflicts
+let getMemberDeclarationName (memb: FSharpMemberOrFunctionOrValue) =
+    let name = getMemberMangledName memb
+
+    let name =
+        //match com.Options.Language, memb.DeclaringEntity with
+        //| Rust, Some ent when memb.IsExtensionMember ->
+        //    // For Rust, add entity prefix to extension methods
+        //    cleanNameAsRustIdentifier name, part.Replace(cleanNameAsRustIdentifier)
+        //| Rust, Some ent when ent.IsInterface && not memb.IsDispatchSlot ->
+        //    // For Rust, add entity prefix to default static interface members
+        //    cleanNameAsRustIdentifier name, part.Replace(cleanNameAsRustIdentifier)
+        //| Rust, _ ->
+        //    // for Rust, no entity prefix for other members
+        //    memberNameAsRustIdentifier name part
+        cleanNameAsJsIdentifier name
+
+    let sanitizedName =
+        //match com.Options.Language with
+        //| Python ->
+        //    let name =
+        //        // Don't snake_case if member has compiled name attribute
+        //        match memb.Attributes |> Helpers.tryFindAttrib Atts.compiledName with
+        //        | Some _ -> name
+        //        | _ -> Fable.Py.Naming.toSnakeCase name
+
+        //    Fable.Py.Naming.sanitizeIdent Fable.Py.Naming.pyBuiltins.Contains name part
+        //| Rust -> Naming.buildNameWithoutSanitation name part
+        //| _ -> 
+        sanitizeIdent (fun _ -> false) name
+
+    //let hasOverloadSuffix = not (String.IsNullOrEmpty(part.OverloadSuffix))
+    sanitizedName //, hasOverloadSuffix
+
+
+let hasOwnSignatureFile (ent: FSharpEntity) =
+    not ent.IsNamespace
+    && (
+        match ent.SignatureLocation with
+        | None -> false
+        | Some m -> m.FileName.EndsWith(".fsi", StringComparison.Ordinal)
+    )
+let parentHasSignatureFile (declaringEntity: FSharpEntity option) =
+    declaringEntity
+    |> Option.map (fun ent -> hasOwnSignatureFile ent)
+    |> Option.defaultValue false
+
+let topLevelBindingHiddenBySignatureFile (v: FSharpMemberOrFunctionOrValue) =
+    v.IsModuleValueOrMember
+    && not v.HasSignatureFile
+    && parentHasSignatureFile v.DeclaringEntity
+let isNotPrivate (memb: FSharpMemberOrFunctionOrValue) =
+    if memb.IsCompilerGenerated then
+        false
+    elif topLevelBindingHiddenBySignatureFile memb then
+        false
+    else
+        not memb.Accessibility.IsPrivate
+
+
+
 
 let makeValue value = Value(value)
 let makeTypeConst (typ: WatAst.WatType) (value: obj) =
@@ -328,20 +907,47 @@ let makeTypeConst (typ: WatAst.WatType) (value: obj) =
     //    NewArray(ArrayValues values, Number(kind, uom), arrayKind) |> makeValue r
     | _ ->
         failwith  $"Unexpected type %A{typ} for literal {value} (%s{value.GetType().FullName})"
-let private transformExpr appliedGenArgs fsExpr =
+let rec private transformExpr appliedGenArgs fsExpr =
     match fsExpr with
     | FSharpExprPatterns.Const(value, typ) ->
         let typ = makeType typ
         let expr: WatAst.Expr = makeTypeConst typ value
         expr
-    | _ -> failwith "Unxepcetd Expression type"
+    | FSharpExprPatterns.Call(None, memb, _, _, [e1; e2]) ->
+        
+        let e1 = transformExpr appliedGenArgs e1
+        let e2 = transformExpr [] e2
+        let e = WatAst.Expr.Get(e1, GetKind.ExprGet e2, WatType.Any)
+        let typ = makeType fsExpr.Type
+        failwith "Cannot handle Call expression"
+    | _ -> failwith "Unexpected Expression type"
 let private transformMemberValue
     name
     (memb: FSharpMemberOrFunctionOrValue)
     (value: FSharpExpr) : WatAst.Declaration list
     =
     let value = transformExpr [] value
-    []
+    
+    [
+        WatAst.MemberDeclaration
+            {
+                Name = name
+                //Args = [] //Kind = Fable.MemberValue(memb.IsMutable)
+                Body = value
+                //IsMangled = true
+                //MemberRef = getValueMemberRef memb
+                //ImplementedSignatureRef = None
+                //UsedNames = set ctx.UsedNamesInDeclarationScope
+                //Tags = Fable.Tags.empty
+                //XmlDoc = tryGetXmlDoc memb.XmlDoc
+            }
+    ]
+    //let fableValue =
+    //    if memb.IsMutable && isNotPrivate memb then
+            
+    //    else
+    //        value
+
     //match value with
     //// Accept import expressions, e.g. let foo = import "foo" "myLib"
     //| Fable.Import(info, typ, r) when not info.IsCompilerGenerated ->
@@ -453,8 +1059,8 @@ let private transformMemberFunctionOrValue
     args
     (body: FSharpExpr) : WatAst.Declaration list
     =
-    //let name, _ = getMemberDeclarationName memb
-    let name = ""
+    let name = getMemberDeclarationName memb
+    //let name = ""
     if isModuleValueForDeclarations memb then
         transformMemberValue name memb body
     else

@@ -685,6 +685,23 @@ let mapToList (f: 'a -> 'b) (xs: 'a seq) : 'b list =
 //    // Ignore entities for which we don't have implementation file data
 //    | TrimRootModule _, (Fable.AssemblyPath _ | Fable.CoreAssemblyName _)
 //    | NoTrimRootModule, _ -> fullName
+//type TrimRootModule =
+//    | TrimRootModule of Compiler
+//    | NoTrimRootModule
+//let private getEntityMangledName trimRootModule (ent: Fable.EntityRef) =
+//    let fullName = ent.FullName
+
+//    match trimRootModule, ent.Path with
+//    | TrimRootModule com, (Fable.SourcePath sourcePath | Fable.PrecompiledLib(sourcePath, _)) ->
+//        let rootMod, _ = com.GetRootModule(sourcePath)
+
+//        if fullName.StartsWith(rootMod, StringComparison.Ordinal) then
+//            fullName.Substring(rootMod.Length).TrimStart('.')
+//        else
+//            fullName
+//    // Ignore entities for which we don't have implementation file data
+//    | TrimRootModule _, (Fable.AssemblyPath _ | Fable.CoreAssemblyName _)
+//    | NoTrimRootModule, _ -> fullName
 let private getMemberMangledName (memb: FSharpMemberOrFunctionOrValue) =
     //if memb.IsExtensionMember then
     //    let overloadSuffix =
@@ -693,20 +710,17 @@ let private getMemberMangledName (memb: FSharpMemberOrFunctionOrValue) =
     //        |> getExtensionHash
 
     //    let entName =
-    //        FsEnt.Ref memb.ApparentEnclosingEntity |> getEntityMangledName NoTrimRootModule
+    //        Ref memb.ApparentEnclosingEntity |> getEntityMangledName NoTrimRootModule
 
     //    entName, Naming.InstanceMemberPart(memb.CompiledName, overloadSuffix)
     //else
-        //match memb.DeclaringEntity with
-        //| Some ent ->
-        //    let entRef = Ref ent
-        //    let entName = entRef.FullName
-        //    entName
+        match memb.DeclaringEntity with
+        | Some ent ->
+            let entRef = Ref ent
+            let entName = entRef.FullName
+            
             //if ent.IsFSharpModule then
-            //    match trimRootModule, entName with
-            //    | TrimRootModule com, _ when com.Options.Language = Rust -> memb.CompiledName, Naming.NoMemberPart // module prefix for Rust
-            //    | _, "" -> memb.CompiledName, Naming.NoMemberPart
-            //    | _, moduleName -> moduleName, Naming.StaticMemberPart(memb.CompiledName, "")
+            entName, memb.CompiledName
             //else
             //    let overloadSuffix = getOverloadSuffixFrom ent memb
 
@@ -718,9 +732,8 @@ let private getMemberMangledName (memb: FSharpMemberOrFunctionOrValue) =
             //        match Util.tryMangleAttribute ent.Attributes with
             //        | Some false -> memb.CompiledName, Naming.NoMemberPart
             //        | Some true
-                    //| None -> entName, Naming.StaticMemberPart(memb.CompiledName, overloadSuffix)
-        //| None -> 
-        memb.CompiledName//, Naming.NoMemberPart
+            //        | None -> entName, Naming.StaticMemberPart(memb.CompiledName, overloadSuffix)
+        | None -> memb.CompiledName, ""//, Naming.NoMemberPart
 let cleanNameAsJsIdentifier (name: string) =
     if name = ".ctor" then
         "$ctor"
@@ -761,8 +774,8 @@ let sanitizeIdentForbiddenCharsWith replace (ident: string) =
 let sanitizeIdentForbiddenChars (ident: string) =
     ident
     |> sanitizeIdentForbiddenCharsWith (fun c -> "$" + String.Format("{0:X}", int c).PadLeft(4, '0'))
-let private buildName sanitize name =
-    sanitize name
+let private buildName (sanitize: string -> string) name part =
+    (sanitize name) + "_" + (sanitize part)
 let checkJsKeywords name =
     if jsKeywords.Contains name then
         name + "$"
@@ -782,16 +795,16 @@ let preventConflicts conflicts originalName =
             check originalName (n + 1)
 
     check originalName 0
-let sanitizeIdent conflicts name =
+let sanitizeIdent conflicts name part =
     // Replace Forbidden Chars
-    buildName sanitizeIdentForbiddenChars name
+    buildName sanitizeIdentForbiddenChars name part
     |> checkJsKeywords
     // Check if it already exists
     |> preventConflicts conflicts
 let getMemberDeclarationName (memb: FSharpMemberOrFunctionOrValue) =
-    let name = getMemberMangledName memb
+    let name, part = getMemberMangledName memb
 
-    let name =
+    let name, part =
         //match com.Options.Language, memb.DeclaringEntity with
         //| Rust, Some ent when memb.IsExtensionMember ->
         //    // For Rust, add entity prefix to extension methods
@@ -802,7 +815,7 @@ let getMemberDeclarationName (memb: FSharpMemberOrFunctionOrValue) =
         //| Rust, _ ->
         //    // for Rust, no entity prefix for other members
         //    memberNameAsRustIdentifier name part
-        cleanNameAsJsIdentifier name
+        cleanNameAsJsIdentifier name, cleanNameAsJsIdentifier part
 
     let sanitizedName =
         //match com.Options.Language with
@@ -816,7 +829,7 @@ let getMemberDeclarationName (memb: FSharpMemberOrFunctionOrValue) =
         //    Fable.Py.Naming.sanitizeIdent Fable.Py.Naming.pyBuiltins.Contains name part
         //| Rust -> Naming.buildNameWithoutSanitation name part
         //| _ -> 
-        sanitizeIdent (fun _ -> false) name
+        sanitizeIdent (fun _ -> false) name part
 
     //let hasOverloadSuffix = not (String.IsNullOrEmpty(part.OverloadSuffix))
     sanitizedName //, hasOverloadSuffix
@@ -913,6 +926,8 @@ let rec private transformExpr appliedGenArgs fsExpr =
         let typ = makeType typ
         let expr: WatAst.Expr = makeTypeConst typ value
         expr
+    | FSharpExprPatterns.CallWithWitnesses(callee, memb, ownerGenArgs, memberGenArgs, witnesses, args) ->
+        failwith "Cannot handle CallWithWitnesses Expr"
     | FSharpExprPatterns.Call(None, memb, _, _, [e1; e2]) ->
         
         let e1 = transformExpr appliedGenArgs e1

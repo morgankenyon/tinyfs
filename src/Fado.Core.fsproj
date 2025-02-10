@@ -7,6 +7,9 @@
 
   <ItemGroup>
     <Compile Include="Literals.fs" />
+    <Compile Include="Transforms.fs" />
+    <Compile Include="Naming.fs" />
+    <Compile Include="Helpers.fs" />
     <Compile Include="WatAst.fs" />
     <Compile Include="FSharpToWat.fs" />
     <Compile Include="TypedWalkthrough.fs" />

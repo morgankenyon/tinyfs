@@ -61,14 +61,20 @@ let x = 1
         FSharpToWat.transformFile input
         |> printAst
     Assert.Equal("Test_x = 1", str)
-[<Fact>]
-let ``Can print simple addition expr`` () =
-    let input = """
+
+[<Theory>]
+[<InlineData("1 + 2")>]
+[<InlineData("1 - 2")>]
+[<InlineData("2 / 1")>]
+[<InlineData("2 * 3")>]
+[<InlineData("4 % 2")>]
+let ``Can print simple arithmetic expr`` expr =
+    let input = $"""
 module Test
 
-let x = 1 + 2
+let x = {expr}
 """
     let str = 
         FSharpToWat.transformFile input
         |> printAst
-    Assert.Equal("Test_x = 1 + 2", str)
+    Assert.Equal($"Test_x = {expr}", str)

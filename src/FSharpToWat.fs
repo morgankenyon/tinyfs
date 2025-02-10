@@ -626,18 +626,18 @@ let applyOp t opName (args: Expr list) =
 
     let nativeOp opName argTypes args =
         match opName, args with
-        | Fado.Core.Transforms.Operators.addition, [ left; right ] ->
+        | Operators.addition, [ left; right ] ->
             match argTypes with
             //| Char :: _ -> binOpChar BinaryPlus left right
             | _ -> binOp BinaryPlus left right
-        //| Operators.subtraction, [ left; right ] ->
-        //    match argTypes with
-        //    | Char :: _ -> binOpChar BinaryMinus left right
-        //    | _ -> binOp BinaryMinus left right
-        //| Operators.multiply, [ left; right ] -> binOp BinaryMultiply left right
-        //| (Operators.division | Operators.divideByInt), [ left; right ] -> binOp BinaryDivide left right
+        | Operators.subtraction, [ left; right ] ->
+            match argTypes with
+            //| Char :: _ -> binOpChar BinaryMinus left right
+            | _ -> binOp BinaryMinus left right
+        | Operators.multiply, [ left; right ] -> binOp BinaryMultiply left right
+        | (Operators.division | Operators.divideByInt), [ left; right ] -> binOp BinaryDivide left right
         //// In dart % operator and .remainder give different values for negative numbers
-        //| Operators.modulus, [ left; right ] -> Helper.InstanceCall(left, "remainder", t, [ right ], ?loc = r)
+        //| Operators.modulus, [ left; right ] -> InstanceCall(left, "remainder", t, [ right ])
         //| Operators.leftShift, [ left; right ] -> binOp BinaryShiftLeft left right |> truncateUnsigned // See #1530
         //| Operators.rightShift, [ left; right ] ->
         //    match argTypes with

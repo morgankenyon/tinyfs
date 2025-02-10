@@ -2,17 +2,22 @@
 
 open Fado.Core.WatAst
 
+let printBinaryOp (binOp: BinaryOperator) =
+    match binOp with
+    | BinaryPlus -> "+"
+    | BinaryMinus -> "-"
+    | BinaryMultiply -> "*"
+    | BinaryDivide -> "/"
+    | _ -> "(unknown)"
 let rec printExpr (expr: Expr) =
     match expr with
     | Operation(kind, tags, typ) ->
         match kind with
         | Binary(operator, left, right) ->
-            match operator with
-            | BinaryPlus ->
-                let leftStr = printExpr left
-                let rightStr = printExpr right
-                sprintf "%s %s %s" leftStr "+" rightStr
-            | _ -> ""
+            let binStr = printBinaryOp operator
+            let leftStr = printExpr left
+            let rightStr = printExpr right
+            sprintf "%s %s %s" leftStr binStr rightStr
         | _ -> ""
     | Value(kind) ->
         match kind with

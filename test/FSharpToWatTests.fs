@@ -1,6 +1,7 @@
 ﻿module Fado.Tests.FSharpToWatTests
 
 open Fado.Core
+open Fado.Core.WatPrinter
 open Xunit
 
 [<Fact>]
@@ -48,3 +49,26 @@ let x = 1 + 2
 """
     let response = FSharpToWat.transformFile input
     Assert.Equal(1, response.Length)
+
+[<Fact>]
+let ``Can print simple assignment expr`` () =
+    let input = """
+module Test
+
+let x = 1
+"""
+    let str = 
+        FSharpToWat.transformFile input
+        |> printAst
+    Assert.Equal("Test_x = 1", str)
+[<Fact>]
+let ``Can print simple addition expr`` () =
+    let input = """
+module Test
+
+let x = 1 + 2
+"""
+    let str = 
+        FSharpToWat.transformFile input
+        |> printAst
+    Assert.Equal("Test_x = 1 + 2", str)

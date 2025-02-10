@@ -25,7 +25,7 @@ let x = 1
 
         match firstMember with
         | WatAst.MemberDeclaration (memD) ->
-            Assert.Equal("x", memD.Name)
+            Assert.Equal("Test_x", memD.Name)
 
             match memD.Body with
             | WatAst.Value (valueKind) ->

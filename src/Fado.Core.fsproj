@@ -12,10 +12,6 @@
     <Compile Include="Helpers.fs" />
     <Compile Include="WatAst.fs" />
     <Compile Include="FSharpToWat.fs" />
-    <Compile Include="TypedWalkthrough.fs" />
-    <Compile Include="WalkThroughTree.fs" />
-    <Compile Include="WasmAst.fs" />
-    <Compile Include="FSharpToWasm.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

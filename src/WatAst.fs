@@ -128,6 +128,9 @@ type Expr =
         match this with
         | IdentExpr id -> id.Type
         | Value kind -> kind.Type
+        | Get(_, _, t)
+        | Call(_, _, t)
+        | Operation(_, _, t) -> t
 type WatType =
     | Array of genericArg: WatType * kind: ArrayKind
     | Unit

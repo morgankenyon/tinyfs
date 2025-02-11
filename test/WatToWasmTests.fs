@@ -12,6 +12,8 @@ open Xunit
 [<InlineData("1 - 3", -2)>]
 [<InlineData("10 / 2", 5)>]
 [<InlineData("10 * 15", 150)>]
+[<InlineData("10 * 15 + 10", 160)>]
+[<InlineData("10 * (15 + 10)", 250)>]
 let ``Can compile and run simple wasm program`` expr expected =
     let input = $"""
 module Test

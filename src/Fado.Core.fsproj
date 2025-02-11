@@ -13,6 +13,7 @@
     <Compile Include="WatAst.fs" />
     <Compile Include="WatPrinter.fs" />
     <Compile Include="FSharpToWat.fs" />
+    <Compile Include="WatToWasm.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

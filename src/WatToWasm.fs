@@ -49,6 +49,16 @@ let i64_VAL_TYPE = 0x7Euy
 let i32_VAL_TYPE = 0x7Fuy
 
 
+type SymbolType =
+| Local
+type SymbolEntry =
+    {
+        name: string
+        index: int
+        symbolType: SymbolType 
+    }
+type SymbolMapDict = System.Collections.Generic.Dictionary<string, SymbolEntry>
+
 let stringToBytes (s: string) =
     System.Text.Encoding.UTF8.GetBytes(s)
 
@@ -226,6 +236,15 @@ let operatorToWasm (op: BinaryOperator) (typ: NumberKind) =
     //extra
     | _ -> INSTR_END
 
+let resolveSymbols (symbolMap: SymbolMapDict) (name: string) =
+    let containsKey = symbolMap.ContainsKey name
+    match containsKey with
+    | true ->            
+        let symbol = symbolMap[name]
+        Ok symbol
+    | false ->
+        Error $"Error: undeclared identifier: {name}"
+
 let rec exprToWasm (expr: Expr) : byte array =
     match expr with
     | Operation(kind, tags, typ) ->
@@ -278,7 +297,48 @@ and declarationsToWasm (decls : Declaration list) : byte array =
     
     wasmBytes
 
+
+let rec convertToSymbolMap (symbolMap: SymbolMapDict) (decls: Declaration list) =
+    for decl in decls do
+        match decl with
+        | ModuleDeclaration modDecl ->
+            convertToSymbolMap symbolMap modDecl.Members
+        | MemberDeclaration memDecl ->
+            let name = memDecl.Name
+            let symbolEntry =
+                {
+                    name = name
+                    index = symbolMap.Count
+                    symbolType = SymbolType.Local
+                }
+            symbolMap.Add(name, symbolEntry)
+            ()
+    //match statement.StateType() with
+    //| Ast.StatementType.Module ->
+    //    let modd = statement :?> Ast.Module
+    //    for state in modd.statements do
+    //        convertToSymbolMap symbolMap state
+    //    ()
+    //| Ast.StatementType.LetStatement ->
+    //    let letState = statement :?> Ast.LetStatement
+    //    let name = letState.name.value
+    //    let symbolEntry = 
+    //        {
+    //            name = name
+    //            index = symbolMap.Count
+    //            symbolType = SymbolType.Local
+    //        }
+    //    symbolMap.Add(name, symbolEntry)
+    //| _ -> ()
+    ()
+let buildSymbolMap (decls: Declaration list) =
+    let symbolMap = new SymbolMapDict();
+
+    convertToSymbolMap symbolMap decls
+    symbolMap
+
 let generateWasm (decls: Declaration list) : byte array =
+    let symbolMap = buildSymbolMap decls
     let wasmBytes = declarationsToWasm decls
 
     concatArrSin wasmBytes INSTR_END

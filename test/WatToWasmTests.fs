@@ -30,3 +30,29 @@ let x () = {expr}
         wasmBytes
         |> runFuncInt32Return "main"
     response.Should().Be(expected)
+
+[<Theory>]
+[<InlineData("1", 1)>]
+//[<InlineData("1 + 3", 4)>]
+//[<InlineData("1 - 3", -2)>]
+//[<InlineData("10 / 2", 5)>]
+//[<InlineData("10 * 15", 150)>]
+//[<InlineData("10 * 15 + 10", 160)>]
+//[<InlineData("10 * (15 + 10)", 250)>]
+let ``Can generate wasm`` expr expected =
+    let input = $"""
+module Test
+
+let x = {expr}
+"""
+    let wasmBytes = 
+        transformFile input
+        |> generateWasm
+
+    printWasm wasmBytes
+
+    wasmBytes.Should().NotBeEmpty()
+    //let response =
+    //    wasmBytes
+    //    |> runFuncInt32Return "main"
+    //response.Should().Be(expected)

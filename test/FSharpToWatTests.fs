@@ -32,3 +32,16 @@ let x = {expr}
         FSharpToWat.transformFile input
         |> printAst
     Assert.Equal($"Test_x = {expr}", str)
+
+[<Fact>]
+let ``Can print two expressions`` () =
+    let input = """
+module Test
+
+let x = 1
+x
+"""
+    let str = 
+        FSharpToWat.transformFile input
+        |> printAst
+    Assert.Equal("Test_x = 1", str)

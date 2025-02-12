@@ -245,7 +245,7 @@ let resolveSymbols (symbolMap: SymbolMapDict) (name: string) =
     | false ->
         Error $"Error: undeclared identifier: {name}"
 
-let rec exprToWasm (expr: Expr) : byte array =
+let rec exprToWasm (expr: Expr) (symbolMap: SymbolMapDict) : byte array =
     match expr with
     | Operation(kind, tags, typ) ->
         match kind, typ with
@@ -253,8 +253,8 @@ let rec exprToWasm (expr: Expr) : byte array =
             let operatorWasm = 
                 operatorToWasm operator numKind
                 |> toArr
-            let leftWasm = exprToWasm left
-            let rightWasm = exprToWasm right
+            let leftWasm = exprToWasm left symbolMap
+            let rightWasm = exprToWasm right symbolMap
 
             Array.concat [| leftWasm; rightWasm; operatorWasm |]
         | _ -> failwith "Unsupported Operation type"
@@ -275,24 +275,25 @@ let argsToWasm (args: Ident list) : byte array =
         //let argTree = expressionToWasm args symbols symbolMap
         arguBytes <- concatArr arguBytes [||]
     arguBytes
-let rec declationToWasm (decl : Declaration) : byte array =
+let rec declationToWasm (decl : Declaration) (symbolMap : SymbolMapDict): byte array =
     match decl with
     | ModuleDeclaration modDecl ->
-        declarationsToWasm modDecl.Members
+        declarationsToWasm modDecl.Members symbolMap
     | MemberDeclaration memDecl when memDecl.Args.Length > 0 ->
-        let argumentBytes = argsToWasm memDecl.Args
-        let valueBytes =
-            concatSinArr INSTR_LOCAL_SET (i32 0)
-        let innerBytes = exprToWasm memDecl.Body
-        concatArr innerBytes valueBytes
+        //let argumentBytes = argsToWasm memDecl.Args
+        //let valueBytes =
+        //    concatSinArr INSTR_LOCAL_SET (i32 0)
+        let innerBytes = exprToWasm memDecl.Body symbolMap
+        innerBytes
+        //concatArr innerBytes valueBytes
     | MemberDeclaration memDecl ->
-        exprToWasm memDecl.Body
+        exprToWasm memDecl.Body symbolMap
 
-and declarationsToWasm (decls : Declaration list) : byte array =
+and declarationsToWasm (decls : Declaration list) (symbolMap : SymbolMapDict) : byte array =
     let mutable wasmBytes : byte array = [||]
 
     for decl in decls do
-        let ddd = declationToWasm decl
+        let ddd = declationToWasm decl symbolMap
         wasmBytes <- concatArr wasmBytes ddd
     
     wasmBytes
@@ -339,7 +340,7 @@ let buildSymbolMap (decls: Declaration list) =
 
 let generateWasm (decls: Declaration list) : byte array =
     let symbolMap = buildSymbolMap decls
-    let wasmBytes = declarationsToWasm decls
+    let wasmBytes = declarationsToWasm decls symbolMap
 
     concatArrSin wasmBytes INSTR_END
 

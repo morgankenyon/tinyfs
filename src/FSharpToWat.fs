@@ -1803,32 +1803,43 @@ let private transformMemberDecl
         []
     | _ -> transformMemberFunctionOrValue memb args body
 
-let rec transformDeclaration (fsDecl: FSharpImplementationFileDeclaration): WatAst.Declaration list =
-    match fsDecl with
-    | FSharpImplementationFileDeclaration.Entity (fsEnt, sub) ->
-        match sub with
-        | [] ->
-            []
-        | _ -> 
-            let firstMember = sub.Head
+let rec transformDeclarations (fsDecls: FSharpImplementationFileDeclaration list): WatAst.Declaration list =
+    fsDecls
+    |> List.collect(fun fsDecl ->
+        match fsDecl with
+        | FSharpImplementationFileDeclaration.Entity (fsEnt, sub) ->
+            match sub with
+            | [] ->
+                []
+            | _ ->
+                let members = transformDeclarations sub
 
-            let members = transformDeclaration firstMember
+                [
+                    WatAst.ModuleDeclaration
+                        {
+                            Name = fsEnt.CompiledName
+                            Members = members
+                        }
+                ]
+        | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(memb, args, body) ->
+            transformMemberDecl memb args body
+        | FSharpImplementationFileDeclaration.InitAction fe ->
+            let e = transformExpr [] fe
 
             [
-                WatAst.ModuleDeclaration
+                WatAst.ActionDeclaration
                     {
-                        Name = fsEnt.CompiledName
-                        Members = members
+                        Body = e
+                        //UsedNames = set ctx.UsedNamesInDeclarationScope
                     }
             ]
-    | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(memb, args, body) ->
-        transformMemberDecl memb args body
-    | _ -> failwith "unexpected declaration type"
+        | _ -> failwith "unexpected declaration type"
+    )
 let transformFile (input: string) =
     let checkProjectResults = parseAndCheckSingleFile input
     let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
 
-    let declaration = checkedFile.Declarations.Head
+    //let declaration = checkedFile.Declarations.Head
 
-    transformDeclaration declaration
+    transformDeclarations checkedFile.Declarations
 

@@ -161,9 +161,17 @@ type ModuleDecl =
         //Entity: EntityRef
         Members: Declaration list
     }
+
+type ActionDecl =
+    {
+        Body: Expr
+        //UsedNames: Set<string>
+    }
+
 and Declaration =
     | ModuleDeclaration of ModuleDecl
-    | MemberDeclaration of MemberDecl
+    | MemberDeclaration of MemberDecl    
+    | ActionDeclaration of ActionDecl
 
 
 

@@ -1,6 +1,6 @@
-﻿module Fado.Core.WatPrinter
+﻿module TinyFS.Core.WatPrinter
 
-open Fado.Core.WatAst
+open TinyFS.Core.WatAst
 
 let printBinaryOp (binOp: BinaryOperator) =
     match binOp with

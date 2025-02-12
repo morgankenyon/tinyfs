@@ -1,7 +1,7 @@
 ﻿module Fado.Tests.FSharpToWatTests
 
-open Fado.Core
-open Fado.Core.WatPrinter
+open TinyFS.Core
+open TinyFS.Core.WatPrinter
 open Xunit
 
 [<Fact>]

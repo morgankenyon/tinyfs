@@ -1,4 +1,4 @@
-﻿module Fado.Core.Transforms
+﻿module TinyFS.Core.Transforms
 
 open FSharp.Compiler.Symbols
 open System

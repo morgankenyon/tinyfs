@@ -1,4 +1,4 @@
-﻿module Fado.Core.Literals
+﻿module TinyFS.Core.Literals
 
 [<Literal>]
 let int32 = "System.Int32"

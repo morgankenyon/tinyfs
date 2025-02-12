@@ -1,7 +1,7 @@
 ﻿module Fado.Tests.WatToWasmTests
 
-open Fado.Core.FSharpToWat
-open Fado.Core.WatToWasm
+open TinyFS.Core.FSharpToWat
+open TinyFS.Core.WatToWasm
 open Faqt
 open Helpers
 open Xunit

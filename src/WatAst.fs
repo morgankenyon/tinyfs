@@ -1,4 +1,4 @@
-﻿module rec Fado.Core.WatAst
+﻿module rec TinyFS.Core.WatAst
 
 open FSharp.Compiler.Symbols
 open System
@@ -575,7 +575,7 @@ let FullName(ent: FSharpEntity) : string =
         | Some n -> n
         | None -> ent.LogicalName
 let Ref(ent: FSharpEntity) : WatAst.EntityRef =
-    let ent = Fado.Core.Transforms.nonAbbreviatedDefinition ent
+    let ent = TinyFS.Core.Transforms.nonAbbreviatedDefinition ent
 
     let path =
         match ent.Assembly.FileName with

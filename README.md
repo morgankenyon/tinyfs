@@ -1,6 +1,8 @@
-# Fado
+# TinyFS
 
-A F# to Wasm Compiler
+> Taking inspiration from the [tinygo](https://tinygo.org/) project.
+
+A F# to Wasm Compiler.
 
 Current status: Nothing works.
 

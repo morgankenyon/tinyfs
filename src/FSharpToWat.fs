@@ -1,6 +1,6 @@
-﻿module rec Fado.Core.FSharpToWat
+﻿module rec TinyFS.Core.FSharpToWat
 
-open Fado.Core
+open TinyFS.Core
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.Text
@@ -909,7 +909,7 @@ let operators t (i: ReplaceCallInfo) (thisArg: Expr option) (args: Expr list) =
     //        |> Some
     //| "Not", [ operand ] -> // TODO: Check custom operator?
     //    makeUnOp r t operand UnaryNot |> Some
-    | Patterns.SetContains Fado.Core.Transforms.Operators.standardSet, _ -> applyOp t i.CompiledName args |> Some
+    | Patterns.SetContains TinyFS.Core.Transforms.Operators.standardSet, _ -> applyOp t i.CompiledName args |> Some
     // Type info
     //| "TypeOf", _ ->
     //    (genArg com ctx r 0 i.GenericArgs)

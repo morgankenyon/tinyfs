@@ -1,6 +1,6 @@
-﻿module Fado.Core.WatToWasm
+﻿module TinyFS.Core.WatToWasm
 
-open Fado.Core.WatAst
+open TinyFS.Core.WatAst
 open System
 
 [<Literal>]

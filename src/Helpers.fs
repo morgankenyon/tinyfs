@@ -1,4 +1,4 @@
-﻿module Fado.Core.Helpers
+﻿module TinyFS.Core.Helpers
 
 open FSharp.Compiler.Symbols
 open System

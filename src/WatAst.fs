@@ -151,8 +151,9 @@ type WatType =
 type MemberDecl =
     {
         Name: string
-        //Args: Ident 
+        Args: Ident list
         Body: Expr
+        MemberRef: MemberRef
     }
 type ModuleDecl =
     {
@@ -834,7 +835,7 @@ let makeTypeFromDef withConstraints (genArgs: IList<FSharpType>) (tdef: FSharpEn
         match FullName tdef with
         // Fable "primitives"
         //| Types.object -> Fable.Any
-        //| Types.unit -> Fable.Unit
+        | Literals.unit -> WatType.Unit
         //| Types.bool -> Fable.Boolean
         //| Types.char -> Fable.Char
         //| Types.string -> Fable.String
@@ -961,3 +962,20 @@ let tryGetXmlDoc =
     function
     | FSharpXmlDoc.FromXmlText(xmlDoc) -> xmlDoc.GetXmlText() |> Some
     | _ -> None
+
+type MemberPart =
+    | InstanceMemberPart of memberCompiledName: string * overloadSuffix: string
+    | StaticMemberPart of memberCompiledName: string * overloadSuffix: string
+    | NoMemberPart
+
+    member this.Replace(f: string -> string) =
+        match this with
+        | InstanceMemberPart(s, o) -> InstanceMemberPart(f s, o)
+        | StaticMemberPart(s, o) -> StaticMemberPart(f s, o)
+        | NoMemberPart -> this
+
+    member this.OverloadSuffix =
+        match this with
+        | InstanceMemberPart(_, o)
+        | StaticMemberPart(_, o) -> o
+        | NoMemberPart -> ""

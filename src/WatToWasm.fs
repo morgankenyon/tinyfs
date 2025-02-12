@@ -14,6 +14,12 @@ let SECTION_ID_CODE = 0xAuy
 [<Literal>]
 let INSTR_END = 0xBuy
 [<Literal>]
+let INSTR_LOCAL_GET = 0x20uy
+[<Literal>]
+let INSTR_LOCAL_SET = 0x21uy
+[<Literal>]
+let INSTR_LOCAL_TEE = 0x22uy
+[<Literal>]
 let i32_CONST = 0x41uy
 [<Literal>]
 let i64_CONST = 0x42uy
@@ -41,7 +47,6 @@ let f32_VAL_TYPE = 0x7Duy
 let i64_VAL_TYPE = 0x7Euy
 [<Literal>]
 let i32_VAL_TYPE = 0x7Fuy
-
 
 
 let stringToBytes (s: string) =
@@ -244,10 +249,23 @@ let rec exprToWasm (expr: Expr) : byte array =
         | _ -> failwith "Unsupported value type"
     | _ -> failwith "Unsupported expression type"
 
+let argsToWasm (args: Ident list) : byte array =
+    let mutable arguBytes: byte array = [||]
+
+    for arg in args do
+        //let argTree = expressionToWasm args symbols symbolMap
+        arguBytes <- concatArr arguBytes [||]
+    arguBytes
 let rec declationToWasm (decl : Declaration) : byte array =
     match decl with
     | ModuleDeclaration modDecl ->
         declarationsToWasm modDecl.Members
+    | MemberDeclaration memDecl when memDecl.Args.Length > 0 ->
+        let argumentBytes = argsToWasm memDecl.Args
+        let valueBytes =
+            concatSinArr INSTR_LOCAL_SET (i32 0)
+        let innerBytes = exprToWasm memDecl.Body
+        concatArr innerBytes valueBytes
     | MemberDeclaration memDecl ->
         exprToWasm memDecl.Body
 
@@ -264,6 +282,7 @@ let generateWasm (decls: Declaration list) : byte array =
     let wasmBytes = declarationsToWasm decls
 
     concatArrSin wasmBytes INSTR_END
+
 //Overall compile function
 let compile (decls : Declaration list) : byte array =
     let emptyBytes: byte [] = Array.zeroCreate 0

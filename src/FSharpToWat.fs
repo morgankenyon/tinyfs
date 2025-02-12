@@ -1175,7 +1175,11 @@ let private getMemberMangledName (memb: FSharpMemberOrFunctionOrValue) =
             let entName = entRef.FullName
             
             //if ent.IsFSharpModule then
-            entName, memb.CompiledName
+            //entName, memb.CompiledName
+            match entName with
+            //| TrimRootModule com, _ when com.Options.Language = Rust -> memb.CompiledName, Naming.NoMemberPart // module prefix for Rust
+            | "" -> memb.CompiledName, WatAst.NoMemberPart
+            | moduleName -> moduleName, WatAst.StaticMemberPart(memb.CompiledName, "")
             //else
             //    let overloadSuffix = getOverloadSuffixFrom ent memb
 
@@ -1188,7 +1192,7 @@ let private getMemberMangledName (memb: FSharpMemberOrFunctionOrValue) =
             //        | Some false -> memb.CompiledName, Naming.NoMemberPart
             //        | Some true
             //        | None -> entName, Naming.StaticMemberPart(memb.CompiledName, overloadSuffix)
-        | None -> memb.CompiledName, ""//, Naming.NoMemberPart
+        | None -> memb.CompiledName, WatAst.NoMemberPart
 let cleanNameAsJsIdentifier (name: string) =
     if name = ".ctor" then
         "$ctor"
@@ -1229,8 +1233,23 @@ let sanitizeIdentForbiddenCharsWith replace (ident: string) =
 let sanitizeIdentForbiddenChars (ident: string) =
     ident
     |> sanitizeIdentForbiddenCharsWith (fun c -> "$" + String.Format("{0:X}", int c).PadLeft(4, '0'))
+let private printPart sanitize separator part overloadSuffix =
+    (if part = "" then
+            ""
+        else
+            separator + (sanitize part))
+    + (if overloadSuffix = "" then
+            ""
+        else
+            "_" + overloadSuffix)
 let private buildName (sanitize: string -> string) name part =
-    (sanitize name) + "_" + (sanitize part)
+    (sanitize name)
+        + (
+            match part with
+            | InstanceMemberPart(s, i) -> printPart sanitize "__" s i
+            | StaticMemberPart(s, i) -> printPart sanitize "_" s i
+            | NoMemberPart -> ""
+        )
 let checkJsKeywords name =
     if jsKeywords.Contains name then
         name + "$"
@@ -1270,7 +1289,7 @@ let getMemberDeclarationName (memb: FSharpMemberOrFunctionOrValue) =
         //| Rust, _ ->
         //    // for Rust, no entity prefix for other members
         //    memberNameAsRustIdentifier name part
-        cleanNameAsJsIdentifier name, cleanNameAsJsIdentifier part
+        cleanNameAsJsIdentifier name, part.Replace(cleanNameAsJsIdentifier)
 
     let sanitizedName =
         //match com.Options.Language with
@@ -1512,6 +1531,38 @@ let rec private transformExpr appliedGenArgs fsExpr =
         let typ = makeType fsExpr.Type
         failwith "Cannot handle Call expression"
     | _ -> failwith "Unexpected Expression type"
+let getValueMemberRef (memb: FSharpMemberOrFunctionOrValue) =
+    match memb.DeclaringEntity with
+    // We cannot retrieve compiler generated members from the entity
+    | Some ent when not memb.IsCompilerGenerated ->
+        let fableMemberFunctionOrValue =
+            FsMemberFunctionOrValue(memb) :> WatAst.MemberFunctionOrValue
+
+        let attributeFullNames =
+            fableMemberFunctionOrValue.Attributes
+            |> Seq.map (fun attr -> attr.Entity.FullName)
+            |> List.ofSeq
+
+        WatAst.MemberRef(
+            Ref(ent),
+            {
+                CompiledName = memb.CompiledName
+                IsInstance = memb.IsInstanceMember
+                NonCurriedArgTypes = None
+                AttributeFullNames = attributeFullNames
+            }
+        )
+    | ent ->
+        let entRef = ent |> Option.map Ref
+        let typ = makeType memb.ReturnParameter.Type
+
+        GeneratedMember.Value(
+            memb.CompiledName,
+            typ,
+            isInstance = memb.IsInstanceMember,
+            isMutable = memb.IsMutable,
+            ?entRef = entRef
+        )
 let private transformMemberValue
     name
     (memb: FSharpMemberOrFunctionOrValue)
@@ -1523,10 +1574,10 @@ let private transformMemberValue
         WatAst.MemberDeclaration
             {
                 Name = name
-                //Args = [] //Kind = Fable.MemberValue(memb.IsMutable)
+                Args = [] //Kind = Fable.MemberValue(memb.IsMutable)
                 Body = value
                 //IsMangled = true
-                //MemberRef = getValueMemberRef memb
+                MemberRef = getValueMemberRef memb
                 //ImplementedSignatureRef = None
                 //UsedNames = set ctx.UsedNamesInDeclarationScope
                 //Tags = Fable.Tags.empty
@@ -1578,18 +1629,75 @@ let private transformMemberValue
     //                XmlDoc = tryGetXmlDoc memb.XmlDoc
     //            }
     //    ]
+let makeIdentFrom (fsRef: FSharpMemberOrFunctionOrValue) : WatAst.Ident =
+    let part = NoMemberPart
 
+    let name =
+        // The F# compiler sometimes adds a numeric suffix. Remove it because it's not deterministic.
+        // See https://github.com/fable-compiler/Fable/issues/2869#issuecomment-1169574962
+        if fsRef.IsCompilerGenerated then
+            // Regex.Replace(fsRef.CompiledName, @"\d+$", "", RegexOptions.Compiled)
+            fsRef.CompiledName.TrimEnd([| '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9' |])
+        else
+            fsRef.CompiledName
+
+    let sanitizedName =
+        sanitizeIdent (fun _ -> false) name part
+
+    let isMutable = fsRef.IsMutable
+
+    //ctx.UsedNamesInDeclarationScope.Add(sanitizedName) |> ignore
+    //let r = makeRange fsRef.DeclarationLocation
+
+    //let r =
+    //    SourceLocation.Create(start = r.start, ``end`` = r.``end``, ?file = r.File, displayName = fsRef.DisplayName)
+
+    {
+        Name = sanitizedName
+        Type = makeType fsRef.FullType
+        IsThisArgument = fsRef.IsMemberThisValue
+        IsCompilerGenerated = fsRef.IsCompilerGenerated
+        IsMutable = isMutable
+        //Range = Some r
+    }
+
+let putIdentInScope (fsRef: FSharpMemberOrFunctionOrValue) : WatAst.Ident =
+    let ident = makeIdentFrom fsRef
+    ident
+let bindMemberArgs (args: FSharpMemberOrFunctionOrValue list list) =
+    // The F# compiler "untuples" the args in methods
+    let args = List.concat args
+
+    let thisArg, args =
+        match args with
+        | firstArg :: restArgs when firstArg.IsMemberThisValue ->
+            let thisArg = putIdentInScope firstArg
+            let thisArg = { thisArg with IsThisArgument = true }
+            [ thisArg ], restArgs
+        | firstArg :: restArgs when firstArg.IsConstructorThisValue ->
+            let thisArg = putIdentInScope firstArg
+            let thisArg = { thisArg with IsThisArgument = true }
+            [ thisArg ], restArgs
+        | _ -> [], args
+
+    let args =
+        (([]), args)
+        ||> List.fold (fun (accArgs) arg ->
+            let arg = putIdentInScope arg
+            arg :: accArgs
+        )
+
+    thisArg @ (List.rev args)
 let private transformMemberFunction
     (name: string)
     (memb: FSharpMemberOrFunctionOrValue)
     args
     (body: FSharpExpr) : WatAst.Declaration list
     =
-    []
-    //let bodyCtx, args = bindMemberArgs com ctx args
-    //let body = transformExpr com bodyCtx [] body |> run
+    let args = bindMemberArgs args
+    let bodyExpr = transformExpr args body
 
-    //match body with
+    match bodyExpr with
     //// Accept import expressions, e.g. let foo x y = import "foo" "myLib"
     //| Fable.Import(info, _, r) when not info.IsCompilerGenerated ->
     //    // Use the full function type
@@ -1606,44 +1714,35 @@ let private transformMemberFunction
     //            Fable.GeneratedMember.Value(name, typ)
 
     //    transformImport com r typ name [] memberRef selector info.Path
-    //| body ->
-    //    // If this is a static constructor, call it immediately
-    //    if memb.CompiledName = ".cctor" then
-    //        [
-    //            Fable.ActionDeclaration
-    //                {
-    //                    Body =
-    //                        Fable.Delegate(args, body, Some name, Fable.Tags.empty)
-    //                        |> makeCall None Fable.Unit (makeCallInfo None [] [])
-    //                    UsedNames = set ctx.UsedNamesInDeclarationScope
-    //                }
-    //        ]
-    //    else
-    //        let body, memberRef =
-    //            match com.Options.Language with
-    //            | JavaScript
-    //            | TypeScript
-    //            | Python ->
-    //                match applyJsPyDecorators com ctx name memb args body with
-    //                | Some body ->
-    //                    body, Fable.GeneratedMember.Value(name, body.Type, isInstance = memb.IsInstanceMember)
-    //                | None -> body, getFunctionMemberRef memb
-    //            | _ -> body, getFunctionMemberRef memb
+    | body ->
+        // If this is a static constructor, call it immediately
+        //if memb.CompiledName = ".cctor" then
+        //    [
+        //        Fable.ActionDeclaration
+        //            {
+        //                Body =
+        //                    Fable.Delegate(args, body, Some name, Fable.Tags.empty)
+        //                    |> makeCall None Fable.Unit (makeCallInfo None [] [])
+        //                UsedNames = set ctx.UsedNamesInDeclarationScope
+        //            }
+        //    ]
+        //else
+        let memberRef = getFunctionMemberRef memb
 
-    //        [
-    //            Fable.MemberDeclaration
-    //                {
-    //                    Name = name
-    //                    Args = args
-    //                    Body = body
-    //                    UsedNames = set ctx.UsedNamesInDeclarationScope
-    //                    IsMangled = true
-    //                    MemberRef = memberRef
-    //                    ImplementedSignatureRef = None
-    //                    Tags = Fable.Tags.empty
-    //                    XmlDoc = tryGetXmlDoc memb.XmlDoc
-    //                }
-    //        ]
+        [
+            WatAst.MemberDeclaration
+                {
+                    Name = name
+                    Args = args
+                    Body = body
+                    //UsedNames = set ctx.UsedNamesInDeclarationScope
+                    //IsMangled = true
+                    MemberRef = memberRef
+                    //ImplementedSignatureRef = None
+                    //Tags = Fable.Tags.empty
+                    //XmlDoc = tryGetXmlDoc memb.XmlDoc
+                }
+        ]
 
 let private transformMemberFunctionOrValue
     (memb: FSharpMemberOrFunctionOrValue)

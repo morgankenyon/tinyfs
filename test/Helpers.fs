@@ -1,5 +1,7 @@
-﻿module Fado.Tests.Helpers
+﻿module TinyFS.Test.Helpers
 
+open Fable
+open TinyFS.Test.TestObjs
 open Wasmtime
 
 let printWasm (bytes: byte array) =
@@ -25,3 +27,8 @@ let runFuncInt32Return (funcName: string) (wasmBytes: byte array) =
 
     let func = instance.GetFunction<int32>(funcName)
     func.Invoke()
+
+let makeCompiler (input: string) =
+    let compilerOptions = CompilerOptionsHelper.Make()
+    let compiler = TestCompiler("test", compilerOptions, input)
+    compiler

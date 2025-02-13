@@ -9,13 +9,16 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TinyFS.Test", "test\TinyFS.
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TinyFS.Cli", "cli\TinyFS.Cli.fsproj", "{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fable.Compiler", "..\Fable\src\Fable.Compiler\Fable.Compiler.fsproj", "{BAC4777B-5264-4198-B8F4-A241E825E502}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fable.Core", "..\Fable\src\Fable.Core\Fable.Core.fsproj", "{33A02C43-5107-42E6-8826-9428CAA064D0}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fable.Transforms", "..\Fable\src\Fable.Transforms\Fable.Transforms.fsproj", "{9D188FAB-28D3-4AD6-BCB5-35A6B46674A5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{561DC9D1-4B10-421E-96F1-AD7EBD0B86D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -30,5 +33,20 @@ Global
 		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{37C9DECA-A4C6-46D1-8E17-ADF3F7DCE4ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAC4777B-5264-4198-B8F4-A241E825E502}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAC4777B-5264-4198-B8F4-A241E825E502}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAC4777B-5264-4198-B8F4-A241E825E502}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAC4777B-5264-4198-B8F4-A241E825E502}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33A02C43-5107-42E6-8826-9428CAA064D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33A02C43-5107-42E6-8826-9428CAA064D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33A02C43-5107-42E6-8826-9428CAA064D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33A02C43-5107-42E6-8826-9428CAA064D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D188FAB-28D3-4AD6-BCB5-35A6B46674A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D188FAB-28D3-4AD6-BCB5-35A6B46674A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D188FAB-28D3-4AD6-BCB5-35A6B46674A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D188FAB-28D3-4AD6-BCB5-35A6B46674A5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

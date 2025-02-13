@@ -1,6 +1,5 @@
 ﻿module TinyFS.Core.WatToWasm
 
-open TinyFS.Core.WatAst
 open System
 
 [<Literal>]
@@ -214,164 +213,164 @@ let modd(sections: byte array array) =
     Array.concat [ magic(); version(); flattenedSections ]
 
 
-///Start converting functions
-let operatorToWasm (op: BinaryOperator) (typ: NumberKind) =
-    match op, typ with
-    //arithmetic
-    | BinaryPlus, Int32 -> INSTR_i32_ADD
-    | BinaryMinus, Int32 -> INSTR_i32_SUB
-    | BinaryMultiply, Int32 -> INSTR_i32_MUL
-    | BinaryDivide, Int32 -> INSTR_i32_DIV_S
-    //| "%" -> INSTR_i32_MOD_S
-    //comparison
-    //| "==" -> INSTR_i32_EQ
-    //| "!=" -> INSTR_i32_NE
-    //| "<" -> INSTR_i32_LT_S
-    //| "<=" -> INSTR_i32_LE_S
-    //| ">" -> INSTR_i32_GT_S
-    //| ">=" -> INSTR_i32_GE_S
-    ////logic
-    //| "and" -> INSTR_i32_AND
-    //| "or" -> INSTR_i32_OR
-    //extra
-    | _ -> INSTR_END
+/////Start converting functions
+//let operatorToWasm (op: BinaryOperator) (typ: NumberKind) =
+//    match op, typ with
+//    //arithmetic
+//    | BinaryPlus, Int32 -> INSTR_i32_ADD
+//    | BinaryMinus, Int32 -> INSTR_i32_SUB
+//    | BinaryMultiply, Int32 -> INSTR_i32_MUL
+//    | BinaryDivide, Int32 -> INSTR_i32_DIV_S
+//    //| "%" -> INSTR_i32_MOD_S
+//    //comparison
+//    //| "==" -> INSTR_i32_EQ
+//    //| "!=" -> INSTR_i32_NE
+//    //| "<" -> INSTR_i32_LT_S
+//    //| "<=" -> INSTR_i32_LE_S
+//    //| ">" -> INSTR_i32_GT_S
+//    //| ">=" -> INSTR_i32_GE_S
+//    ////logic
+//    //| "and" -> INSTR_i32_AND
+//    //| "or" -> INSTR_i32_OR
+//    //extra
+//    | _ -> INSTR_END
 
-let resolveSymbols (symbolMap: SymbolMapDict) (name: string) =
-    let containsKey = symbolMap.ContainsKey name
-    match containsKey with
-    | true ->            
-        let symbol = symbolMap[name]
-        Ok symbol
-    | false ->
-        Error $"Error: undeclared identifier: {name}"
+//let resolveSymbols (symbolMap: SymbolMapDict) (name: string) =
+//    let containsKey = symbolMap.ContainsKey name
+//    match containsKey with
+//    | true ->            
+//        let symbol = symbolMap[name]
+//        Ok symbol
+//    | false ->
+//        Error $"Error: undeclared identifier: {name}"
 
-let rec exprToWasm (expr: Expr) (symbolMap: SymbolMapDict) : byte array =
-    match expr with
-    | Operation(kind, tags, typ) ->
-        match kind, typ with
-        | Binary(operator, left, right), Number(numKind)->
-            let operatorWasm = 
-                operatorToWasm operator numKind
-                |> toArr
-            let leftWasm = exprToWasm left symbolMap
-            let rightWasm = exprToWasm right symbolMap
+//let rec exprToWasm (expr: Expr) (symbolMap: SymbolMapDict) : byte array =
+//    match expr with
+//    | Operation(kind, tags, typ) ->
+//        match kind, typ with
+//        | Binary(operator, left, right), Number(numKind)->
+//            let operatorWasm = 
+//                operatorToWasm operator numKind
+//                |> toArr
+//            let leftWasm = exprToWasm left symbolMap
+//            let rightWasm = exprToWasm right symbolMap
 
-            Array.concat [| leftWasm; rightWasm; operatorWasm |]
-        | _ -> failwith "Unsupported Operation type"
-    | Value(kind) ->
-        match kind with
-        | NumberConstant(value) ->
-            match value with
-            | NumberValue.Int32 num ->  
-                concatSinArr i32_CONST (i32 num)
-            | _ -> failwith "Not supporting int64s right now"
-        | _ -> failwith "Unsupported value type"
-    | _ -> failwith "Unsupported expression type"
+//            Array.concat [| leftWasm; rightWasm; operatorWasm |]
+//        | _ -> failwith "Unsupported Operation type"
+//    | Value(kind) ->
+//        match kind with
+//        | NumberConstant(value) ->
+//            match value with
+//            | NumberValue.Int32 num ->  
+//                concatSinArr i32_CONST (i32 num)
+//            | _ -> failwith "Not supporting int64s right now"
+//        | _ -> failwith "Unsupported value type"
+//    | _ -> failwith "Unsupported expression type"
 
-let argsToWasm (args: Ident list) : byte array =
-    let mutable arguBytes: byte array = [||]
+//let argsToWasm (args: Ident list) : byte array =
+//    let mutable arguBytes: byte array = [||]
 
-    for arg in args do
-        //let argTree = expressionToWasm args symbols symbolMap
-        arguBytes <- concatArr arguBytes [||]
-    arguBytes
-let rec declationToWasm (decl : Declaration) (symbolMap : SymbolMapDict): byte array =
-    match decl with
-    | ModuleDeclaration modDecl ->
-        declarationsToWasm modDecl.Members symbolMap
-    | MemberDeclaration memDecl when memDecl.Args.Length > 0 ->
-        //let argumentBytes = argsToWasm memDecl.Args
-        //let valueBytes =
-        //    concatSinArr INSTR_LOCAL_SET (i32 0)
-        let innerBytes = exprToWasm memDecl.Body symbolMap
-        innerBytes
-        //concatArr innerBytes valueBytes
-    | MemberDeclaration memDecl ->
-        exprToWasm memDecl.Body symbolMap
+//    for arg in args do
+//        //let argTree = expressionToWasm args symbols symbolMap
+//        arguBytes <- concatArr arguBytes [||]
+//    arguBytes
+//let rec declationToWasm (decl : Declaration) (symbolMap : SymbolMapDict): byte array =
+//    match decl with
+//    | ModuleDeclaration modDecl ->
+//        declarationsToWasm modDecl.Members symbolMap
+//    | MemberDeclaration memDecl when memDecl.Args.Length > 0 ->
+//        //let argumentBytes = argsToWasm memDecl.Args
+//        //let valueBytes =
+//        //    concatSinArr INSTR_LOCAL_SET (i32 0)
+//        let innerBytes = exprToWasm memDecl.Body symbolMap
+//        innerBytes
+//        //concatArr innerBytes valueBytes
+//    | MemberDeclaration memDecl ->
+//        exprToWasm memDecl.Body symbolMap
 
-and declarationsToWasm (decls : Declaration list) (symbolMap : SymbolMapDict) : byte array =
-    let mutable wasmBytes : byte array = [||]
+//and declarationsToWasm (decls : Declaration list) (symbolMap : SymbolMapDict) : byte array =
+//    let mutable wasmBytes : byte array = [||]
 
-    for decl in decls do
-        let ddd = declationToWasm decl symbolMap
-        wasmBytes <- concatArr wasmBytes ddd
+//    for decl in decls do
+//        let ddd = declationToWasm decl symbolMap
+//        wasmBytes <- concatArr wasmBytes ddd
     
-    wasmBytes
+//    wasmBytes
 
 
-let rec convertToSymbolMap (symbolMap: SymbolMapDict) (decls: Declaration list) =
-    for decl in decls do
-        match decl with
-        | ModuleDeclaration modDecl ->
-            convertToSymbolMap symbolMap modDecl.Members
-        | MemberDeclaration memDecl ->
-            let name = memDecl.Name
-            let symbolEntry =
-                {
-                    name = name
-                    index = symbolMap.Count
-                    symbolType = SymbolType.Local
-                }
-            symbolMap.Add(name, symbolEntry)
-            ()
-    //match statement.StateType() with
-    //| Ast.StatementType.Module ->
-    //    let modd = statement :?> Ast.Module
-    //    for state in modd.statements do
-    //        convertToSymbolMap symbolMap state
-    //    ()
-    //| Ast.StatementType.LetStatement ->
-    //    let letState = statement :?> Ast.LetStatement
-    //    let name = letState.name.value
-    //    let symbolEntry = 
-    //        {
-    //            name = name
-    //            index = symbolMap.Count
-    //            symbolType = SymbolType.Local
-    //        }
-    //    symbolMap.Add(name, symbolEntry)
-    //| _ -> ()
-    ()
-let buildSymbolMap (decls: Declaration list) =
-    let symbolMap = new SymbolMapDict();
+//let rec convertToSymbolMap (symbolMap: SymbolMapDict) (decls: Declaration list) =
+//    for decl in decls do
+//        match decl with
+//        | ModuleDeclaration modDecl ->
+//            convertToSymbolMap symbolMap modDecl.Members
+//        | MemberDeclaration memDecl ->
+//            let name = memDecl.Name
+//            let symbolEntry =
+//                {
+//                    name = name
+//                    index = symbolMap.Count
+//                    symbolType = SymbolType.Local
+//                }
+//            symbolMap.Add(name, symbolEntry)
+//            ()
+//    //match statement.StateType() with
+//    //| Ast.StatementType.Module ->
+//    //    let modd = statement :?> Ast.Module
+//    //    for state in modd.statements do
+//    //        convertToSymbolMap symbolMap state
+//    //    ()
+//    //| Ast.StatementType.LetStatement ->
+//    //    let letState = statement :?> Ast.LetStatement
+//    //    let name = letState.name.value
+//    //    let symbolEntry = 
+//    //        {
+//    //            name = name
+//    //            index = symbolMap.Count
+//    //            symbolType = SymbolType.Local
+//    //        }
+//    //    symbolMap.Add(name, symbolEntry)
+//    //| _ -> ()
+//    ()
+//let buildSymbolMap (decls: Declaration list) =
+//    let symbolMap = new SymbolMapDict();
 
-    convertToSymbolMap symbolMap decls
-    symbolMap
+//    convertToSymbolMap symbolMap decls
+//    symbolMap
 
-let generateWasm (decls: Declaration list) : byte array =
-    let symbolMap = buildSymbolMap decls
-    let wasmBytes = declarationsToWasm decls symbolMap
+//let generateWasm (decls: Declaration list) : byte array =
+//    let symbolMap = buildSymbolMap decls
+//    let wasmBytes = declarationsToWasm decls symbolMap
 
-    concatArrSin wasmBytes INSTR_END
+//    concatArrSin wasmBytes INSTR_END
 
-//Overall compile function
-let compile (decls : Declaration list) : byte array =
-    let emptyBytes: byte [] = Array.zeroCreate 0
+////Overall compile function
+//let compile (decls : Declaration list) : byte array =
+//    let emptyBytes: byte [] = Array.zeroCreate 0
 
-    //Creating type section
-    let funcType = functype(emptyBytes, [| i32_VAL_TYPE |])
-    let typeSection = typesec([| funcType |])
+//    //Creating type section
+//    let funcType = functype(emptyBytes, [| i32_VAL_TYPE |])
+//    let typeSection = typesec([| funcType |])
 
-    //creating func section
-    let funcSection = funcsec([| [|0uy|] |])
+//    //creating func section
+//    let funcSection = funcsec([| [|0uy|] |])
 
-    //creating export section
-    let exportDesc = exportdesc(0uy)
-    let export = export "main" exportDesc
-    let exportSection = exportsec [| export |]
+//    //creating export section
+//    let exportDesc = exportdesc(0uy)
+//    let export = export "main" exportDesc
+//    let exportSection = exportsec [| export |]
 
-    //creating code section
-    let functions =
-        generateWasm decls
-        |> func emptyBytes
-    let code = code functions
-    let codeSection = 
-        codesec [| code |]
+//    //creating code section
+//    let functions =
+//        generateWasm decls
+//        |> func emptyBytes
+//    let code = code functions
+//    let codeSection = 
+//        codesec [| code |]
 
-    let sections = [| typeSection; funcSection; exportSection; codeSection |]
+//    let sections = [| typeSection; funcSection; exportSection; codeSection |]
 
-    let wasmBytes =
-        sections
-        |> modd
+//    let wasmBytes =
+//        sections
+//        |> modd
 
-    wasmBytes
+//    wasmBytes

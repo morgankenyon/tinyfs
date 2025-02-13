@@ -6,19 +6,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Literals.fs" />
-    <Compile Include="Transforms.fs" />
-    <Compile Include="Naming.fs" />
-    <Compile Include="Helpers.fs" />
-    <Compile Include="WatAst.fs" />
-    <Compile Include="WatPrinter.fs" />
-    <Compile Include="FSharpToWat.fs" />
+    <Compile Include="FSharpToAst.fs" />
     <Compile Include="WatToWasm.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FSharp.Compiler.Service" Version="43.9.101" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Fable\src\Fable.Compiler\Fable.Compiler.fsproj" />
+    <ProjectReference Include="..\..\Fable\src\Fable.Core\Fable.Core.fsproj" />
+    <ProjectReference Include="..\..\Fable\src\Fable.Transforms\Fable.Transforms.fsproj" />
   </ItemGroup>
 
 </Project>

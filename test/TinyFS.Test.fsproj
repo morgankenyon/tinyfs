@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
@@ -10,7 +10,7 @@
     <Compile Include="TestObjs.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="FSharpToAstTests.fs" />
-    <Compile Include="WatToWasmTests.fs" />
+    <Compile Include="AstToWasmTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -26,5 +26,11 @@
   <ItemGroup>
     <ProjectReference Include="..\src\TinyFS.Core.fsproj" />
   </ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="../lib/fcs/FSharp.Compiler.Service.dll" />
+		<Reference Include="../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
+		<Reference Include="../lib/fcs/FSharp.Core.dll" />
+	</ItemGroup>
 
 </Project>

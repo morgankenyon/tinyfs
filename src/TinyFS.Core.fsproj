@@ -1,24 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="FSharpToAst.fs" />
-    <Compile Include="WatToWasm.fs" />
+    <Compile Include="AstToWasm.fs" />
     <Compile Include="Library.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="FSharp.Compiler.Service" Version="43.9.101" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Fable\src\Fable.Compiler\Fable.Compiler.fsproj" />
     <ProjectReference Include="..\..\Fable\src\Fable.Core\Fable.Core.fsproj" />
     <ProjectReference Include="..\..\Fable\src\Fable.Transforms\Fable.Transforms.fsproj" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <Reference Include="../lib/fcs/FSharp.Compiler.Service.dll" />
+    <Reference Include="../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
+    <Reference Include="../lib/fcs/FSharp.Core.dll" />
   </ItemGroup>
 
 </Project>

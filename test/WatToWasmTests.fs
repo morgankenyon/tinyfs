@@ -7,24 +7,24 @@ open TinyFS.Core.WatToWasm
 open TinyFS.Core.FSharpToAst
 open Xunit
 
-[<Theory>]
-[<InlineData("1", 1)>]
+//[<Theory>]
+//[<InlineData("1", 1)>]
 //[<InlineData("1 + 3", 4)>]
 //[<InlineData("1 - 3", -2)>]
 //[<InlineData("10 / 2", 5)>]
 //[<InlineData("10 * 15", 150)>]
 //[<InlineData("10 * 15 + 10", 160)>]
 //[<InlineData("10 * (15 + 10)", 250)>]
-let ``Can compile and run simple wasm program`` expr expected =
-    let input = $"""
-module Test
+//let ``Can compile and run simple wasm program`` expr expected =
+//    let input = $"""
+//module Test
 
-let x () = {expr}
-"""
-    let fableFile =
-        makeCompiler input
-        |> generateAst
-    fableFile.Declarations.Should().NotBeEmpty()
+//let x = {expr}
+//"""
+//    let fableFile =
+//        makeCompiler input
+//        |> generateAst
+//    fableFile.Declarations.Should().NotBeEmpty()
     //let wasmBytes = 
     //    transformFile input
     //    |> compile

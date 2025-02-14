@@ -258,16 +258,24 @@ let rec exprToWasm (expr: Expr) (symbolMap: SymbolMapDict) : byte array =
             let rightWasm = exprToWasm right symbolMap
 
             Array.concat [| leftWasm; rightWasm; operatorWasm |]
-        | _ -> failwith "Unsupported Operation type"
+        | Unary(_, operand), Number(_, _) ->
+            //In F#, integer division needs to return an INT
+            //So division is wrapped in an Unary expression
+            //But I don't think we need that in Wasm
+            exprToWasm operand symbolMap
+        | Unary(_, operand), Any ->
+            //Also used for F# integer division referenced above
+            exprToWasm operand symbolMap
+        | _ -> failwith "TinyFS: Unsupported Operation type"
     | Value(kind, _) ->
         match kind with
         | NumberConstant(value, _) ->
             match value with
             | NumberValue.Int32 num ->  
                 concatSinArr i32_CONST (i32 num)
-            | _ -> failwith "Not supporting int64s right now"
-        | _ -> failwith "Unsupported value type"
-    | _ -> failwith "Unsupported expression type"
+            | _ -> failwith "TinyFS: Not supporting int64s right now"
+        | _ -> failwith "TinyFS: Unsupported value type"
+    | _ -> failwith "TinyFS: Unsupported expression type"
 
 let argsToWasm (args: Ident list) : byte array =
     let mutable arguBytes: byte array = [||]
@@ -289,7 +297,7 @@ let rec declationToWasm (decl : Declaration) (symbolMap : SymbolMapDict): byte a
         //concatArr innerBytes valueBytes
     | MemberDeclaration memDecl ->
         exprToWasm memDecl.Body symbolMap
-    | _ -> failwith "Unsupported declaration type"
+    | _ -> failwith "TinyFS: Unsupported declaration type"
 
 and declarationsToWasm (decls : Declaration list) (symbolMap : SymbolMapDict) : byte array =
     let mutable wasmBytes : byte array = [||]
@@ -316,7 +324,7 @@ let rec convertToSymbolMap (symbolMap: SymbolMapDict) (decls: Declaration list) 
                 }
             symbolMap.Add(name, symbolEntry)
             ()
-        | _ -> failwith "Unsupported declaration type for symbolmap"
+        | _ -> failwith "TinyFS: Unsupported declaration type for symbolmap"
     ()
 let buildSymbolMap (decls: Declaration list) =
     let symbolMap = new SymbolMapDict();

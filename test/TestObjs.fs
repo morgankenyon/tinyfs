@@ -18,9 +18,8 @@ type TestCompiler
     let mutable counter = -1
     let logs = Option.defaultWith ResizeArray logs
 
-
-
     member _.fileText = fileText
+    static member Checker :FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
     interface Fable.Compiler with
         member _.Options = options
         member _.Plugins: Fable.CompilerPlugins = raise (System.NotImplementedException())
@@ -58,9 +57,7 @@ type TestCompiler
                 let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
 
                 checkedFile.Declarations
-
-            let checker = FSharpChecker.Create(keepAssemblyContents = true)
-            let decls = getDeclarations checker this.fileText
+            let decls = getDeclarations TestCompiler.Checker this.fileText
             decls
 
         member this.GetRootModule(fileName: string)  = 

@@ -4,6 +4,8 @@ open Fable
 open TinyFS.Test.TestObjs
 open Wasmtime
 
+
+
 let printWasm (bytes: byte array) =
     let stringRepresentation = bytes
                                 |> Array.map (fun by -> by.ToString())

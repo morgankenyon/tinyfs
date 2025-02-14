@@ -8,13 +8,13 @@ open TinyFS.Core.FSharpToAst
 open Xunit
 
 [<Theory>]
-//[<InlineData("1", 1)>]
+[<InlineData("1", 1)>]
 [<InlineData("1 + 3", 4)>]
-//[<InlineData("1 - 3", -2)>]
-//[<InlineData("10 / 2", 5)>]
-//[<InlineData("10 * 15", 150)>]
-//[<InlineData("10 * 15 + 10", 160)>]
-//[<InlineData("10 * (15 + 10)", 250)>]
+[<InlineData("1 - 3", -2)>]
+[<InlineData("10 / 2", 5)>]
+[<InlineData("10 * 15", 150)>]
+[<InlineData("10 * 15 + 10", 160)>]
+[<InlineData("10 * (15 + 10)", 250)>]
 let ``Can compile and run simple wasm program`` expr expected =
     let input = $"""
 module Test

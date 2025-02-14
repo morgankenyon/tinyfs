@@ -2,11 +2,13 @@
 
 > Taking inspiration from the [tinygo](https://tinygo.org/) project.
 
-A F# to Wasm Compiler.
+F# for WebAssembly. 
+
+TinyFS is a F# to Wasm Compiler.
 
 Current status: Basic int32 arithmetic operators work. 
 
-Everything is currently run through unit tests, there's no CLI to auto compiler a file or fsproj.
+Everything is currently run through unit tests, there's no CLI to compile a file or fsproj.
 
 ## How Is This Working
 

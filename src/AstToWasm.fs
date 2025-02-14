@@ -91,14 +91,24 @@ type SymbolEntry =
       index: int
       symbolType: SymbolType }
 
-type SymbolDict = Dictionary<string, SymbolEntry>
-type NestedSymbolDict = Dictionary<string, SymbolDict * int>
+///Holds references to local params
+type LocalSymbolDict = Dictionary<string, SymbolEntry>
+
+///This is designed to hold references to all functions and
+///those functions local params
+///The int in the value tuple references which number function
+///this is in the module because Wasm tracks function by index
+type FunctionSymbolDict = Dictionary<string, LocalSymbolDict * int>
 
 type SymbolEntries =
-    | Nested of NestedSymbolDict
-    | Locals of SymbolDict
+    | Function of FunctionSymbolDict
+    | Locals of LocalSymbolDict
 
-type SymbolScope = LinkedList<SymbolEntries>
+///Tracks all modules symbols, whether top level functions
+///or local parameters
+///First entry in list is always the module level functions
+///Subsequent entries are local params
+type ModuleSymbolList = LinkedList<SymbolEntries>
 
 let stringToBytes (s: string) = System.Text.Encoding.UTF8.GetBytes(s)
 
@@ -279,23 +289,23 @@ let operatorToWasm (op: BinaryOperator) (typ: NumberKind) =
     //extra
     | _ -> INSTR_END
 
-let resolveSymbols (symbolMap: SymbolDict) (name: string) =
-    let containsKey = symbolMap.ContainsKey name
+let resolveSymbols (localSymbols: LocalSymbolDict) (name: string) =
+    let containsKey = localSymbols.ContainsKey name
 
     match containsKey with
     | true ->
-        let symbol = symbolMap[name]
+        let symbol = localSymbols[name]
         Ok symbol
     | false -> Error $"Error: undeclared identifier: {name}"
 
-let rec exprToWasm (expr: Expr) (symbols: NestedSymbolDict) (symbolMap: SymbolDict) : byte array =
+let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymbols: LocalSymbolDict) : byte array =
     match expr with
-    | Operation (kind, tags, typ, _) ->
+    | Operation (kind, _, typ, _) ->
         match kind, typ with
         | Binary (operator, left, right), Number (numKind, _) ->
             let operatorWasm = operatorToWasm operator numKind |> toArr
-            let leftWasm = exprToWasm left symbols symbolMap
-            let rightWasm = exprToWasm right symbols symbolMap
+            let leftWasm = exprToWasm left functionSymbols localSymbols
+            let rightWasm = exprToWasm right functionSymbols localSymbols
 
             Array.concat [| leftWasm
                             rightWasm
@@ -305,10 +315,10 @@ let rec exprToWasm (expr: Expr) (symbols: NestedSymbolDict) (symbolMap: SymbolDi
             //So division is wrapped in an Unary expression
             //to return an INT versus a float
             //But I don't think we need that in Wasm
-            exprToWasm operand symbols symbolMap
+            exprToWasm operand functionSymbols localSymbols
         | Unary (_, operand), Any ->
             //Also used for F# integer division referenced above
-            exprToWasm operand symbols symbolMap
+            exprToWasm operand functionSymbols localSymbols
         | _ -> failwith "TinyFS: Unsupported Operation type"
     | Value (kind, _) ->
         match kind with
@@ -328,20 +338,20 @@ let rec exprToWasm (expr: Expr) (symbols: NestedSymbolDict) (symbolMap: SymbolDi
 
 //    arguBytes
 
-let rec convertToSymbolMap (scopes: SymbolScope) (decls: Declaration list) =
+let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) (decls: Declaration list) =
     for decl in decls do
         match decl with
-        | ModuleDeclaration modDecl -> convertToSymbolMap scopes modDecl.Members
+        | ModuleDeclaration modDecl -> convertToModuleSymbolList moduleSymbolList modDecl.Members
         | MemberDeclaration memDecl ->
             let name = memDecl.Name
-            let locals = new SymbolDict()
-            let last = scopes.Last.Value
+            let locals = new LocalSymbolDict()
+            let last = moduleSymbolList.Last.Value
 
             match last with
-            | Nested (inner) -> inner.Add(name, (locals, inner.Count))
+            | Function (inner) -> inner.Add(name, (locals, inner.Count))
             | Locals _ -> failwith "TinyFS: Should have been nested when converting symbol map"
 
-            scopes.AddLast(Locals locals) |> ignore
+            moduleSymbolList.AddLast(Locals locals) |> ignore
 
             for param in memDecl.Args do
                 let paramName = param.Name
@@ -352,40 +362,42 @@ let rec convertToSymbolMap (scopes: SymbolScope) (decls: Declaration list) =
                       symbolType = SymbolType.Param }
 
                 locals.Add(paramName, symbolEntry)
+
             //TODO - need to do this to handle local parameters inside of functions
+            //Also need to figure out how to supported nested let functions
             //buildSymbolTAble memDecl.body scopes
 
-            scopes.RemoveLast()
+            moduleSymbolList.RemoveLast()
 
             ()
         | _ -> failwith "TinyFS: Unsupported declaration type for symbolmap"
 
     ()
 
-let buildSymbolMap (decls: Declaration list) =
-    let scopes = new SymbolScope()
-    let nested = Nested(NestedSymbolDict())
-    scopes.AddLast nested |> ignore
+let buildModuleSymbolList (decls: Declaration list) =
+    let moduleSymbolList = new ModuleSymbolList()
+    let functions = Function(FunctionSymbolDict())
+    moduleSymbolList.AddLast functions |> ignore
 
-    convertToSymbolMap scopes decls
-    scopes
+    convertToModuleSymbolList moduleSymbolList decls
+    moduleSymbolList
 
-let rec defineFunctionDecls (decls: Declaration list) (symbols: NestedSymbolDict) : WasmFuncBytes array =
+let rec defineFunctionDecls (decls: Declaration list) (functionSymbols: FunctionSymbolDict) : WasmFuncBytes array =
     let mutable functionDecls: WasmFuncBytes array = [||]
 
     for decl in decls do
         let funcs =
             match decl with
-            | ModuleDeclaration modDecl -> defineFunctionDecls modDecl.Members symbols
+            | ModuleDeclaration modDecl -> defineFunctionDecls modDecl.Members functionSymbols
             | MemberDeclaration memDecl ->
                 //need logic for handling module let bindings that have no parameters
                 //if that a zero parameter function? Or is that a module wide variable??
                 //does it matter??
                 let name = memDecl.Name
 
-                let (funcSymbols, localVars) =
-                    if symbols.ContainsKey name then
-                        let (currentSymbols, _) = symbols[name]
+                let (symbolsOfFunction, localVars) =
+                    if functionSymbols.ContainsKey name then
+                        let (currentSymbols, _) = functionSymbols[name]
                         let mutable symbolValues: SymbolEntry array = [||]
 
                         for sym in currentSymbols.Values do
@@ -393,7 +405,7 @@ let rec defineFunctionDecls (decls: Declaration list) (symbols: NestedSymbolDict
 
                         (currentSymbols, symbolValues)
                     else
-                        (new SymbolDict(), [||])
+                        (new LocalSymbolDict(), [||])
 
                 let paramVals =
                     localVars
@@ -406,7 +418,7 @@ let rec defineFunctionDecls (decls: Declaration list) (symbols: NestedSymbolDict
                     |> Array.filter (fun se -> se.symbolType = SymbolType.Local)
                     |> Array.length
 
-                let bodyWasm = exprToWasm memDecl.Body symbols funcSymbols
+                let bodyWasm = exprToWasm memDecl.Body functionSymbols symbolsOfFunction
 
                 let functionDecls: WasmFuncBytes array =
                     [| { name = name
@@ -460,13 +472,13 @@ let buildModule (functionDecls: WasmFuncBytes array) =
 
 //Overall compile function
 let compile (decls: Declaration list) : byte array =
-    let symbolScope = buildSymbolMap decls
+    let moduleSymbolList = buildModuleSymbolList decls
 
-    let symbols =
-        match symbolScope.First.Value with
-        | Nested nested -> nested
+    let functionSymbols =
+        match moduleSymbolList.First.Value with
+        | Function fnSymbols -> fnSymbols
         | Locals _ -> failwith "TinyFS: Should not be locals in compile"
 
-    let functionDecls = defineFunctionDecls decls symbols
+    let functionDecls = defineFunctionDecls decls functionSymbols
 
     buildModule functionDecls

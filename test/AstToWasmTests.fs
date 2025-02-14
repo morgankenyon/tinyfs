@@ -13,9 +13,9 @@ let getDeclarations (input: string) =
     let fableFile = getAst input
     fableFile.Declarations
 
-let getSymbols (symbolScope: SymbolScope) =
-    match symbolScope.First.Value with
-    | Nested nested -> nested
+let getSymbols (moduleSymbols: ModuleSymbolList) =
+    match moduleSymbols.First.Value with
+    | Function functions -> functions
     | Locals _ -> failwith "TinyFS: Should not be locals in compile"
 
 [<Theory>]
@@ -53,10 +53,10 @@ let x = 1
 """
 
     let decls = getDeclarations input
-    let symbols = buildSymbolMap decls |> getSymbols
+    let functionSymbols = buildModuleSymbolList decls |> getSymbols
 
-    % symbols.Should().HaveLength(1)
-    let hasKey = symbols.ContainsKey "Test_x"
+    % functionSymbols.Should().HaveLength(1)
+    let hasKey = functionSymbols.ContainsKey "Test_x"
     % hasKey.Should().BeTrue()
 
 [<Fact>]
@@ -71,16 +71,16 @@ let z = 1
 """
 
     let decls = getDeclarations input
-    let symbols = buildSymbolMap decls |> getSymbols
+    let functionSymbols = buildModuleSymbolList decls |> getSymbols
 
-    % symbols.Should().HaveLength(3)
-    % (symbols.ContainsKey "Test_x").Should().BeTrue()
-    % (symbols.ContainsKey "Test_y").Should().BeTrue()
-    % (symbols.ContainsKey "Test_z").Should().BeTrue()
+    % functionSymbols.Should().HaveLength(3)
+    % (functionSymbols.ContainsKey "Test_x").Should().BeTrue()
+    % (functionSymbols.ContainsKey "Test_y").Should().BeTrue()
+    % (functionSymbols.ContainsKey "Test_z").Should().BeTrue()
 
-    let (xDict, xIndex) = symbols["Test_x"]
-    let (yDict, yIndex) = symbols["Test_y"]
-    let (zDict, zIndex) = symbols["Test_z"]
+    let (xDict, xIndex) = functionSymbols["Test_x"]
+    let (yDict, yIndex) = functionSymbols["Test_y"]
+    let (zDict, zIndex) = functionSymbols["Test_z"]
 
     % xDict.Count.Should().Be(0)
     % xIndex.Should().Be(0)
@@ -90,6 +90,3 @@ let z = 1
 
     % zDict.Count.Should().Be(0)
     % zIndex.Should().Be(2)
-
-//[<Fact>]
-//let ``Can build function declarations`` () =

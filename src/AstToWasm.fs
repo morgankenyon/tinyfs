@@ -269,6 +269,10 @@ let modd (sections: byte list list) =
 
     aList3 (magic ()) (version ()) flattenedSections
 
+let getMemberName (memRef: MemberRef) =
+    match memRef with
+    | MemberRef (_, info) -> info.CompiledName
+    | _ -> failwith "TinyFS: Cannot handle GeneratedMemberRef"
 
 ///Start converting functions
 let operatorToWasm (op: BinaryOperator) (typ: NumberKind) =
@@ -303,6 +307,7 @@ let resolveSymbols (localSymbols: LocalSymbolDict) (name: string) =
 
 let buildExprError (expr: Expr) =
     (sprintf "TinyFS: '%s' is currently an unsupported expression type" (expr.GetType().ToString()))
+
 let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymbols: LocalSymbolDict) : byte list =
     match expr with
     | Operation (kind, _, typ, _) ->
@@ -330,31 +335,36 @@ let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymb
             | NumberValue.Int32 num -> appendSinList i32_CONST (i32 num)
             | _ -> failwith "TinyFS: Not supporting int64s right now"
         | _ -> failwith "TinyFS: Unsupported value type"
-    | Extended(extendedSet, _) ->
+    | Extended (extendedSet, _) ->
         match extendedSet with
         | Throw (exExprOpt, typ) ->
             match exExprOpt with
-            | Some exExpr ->
-                exprToWasm exExpr functionSymbols localSymbols
+            | Some exExpr -> exprToWasm exExpr functionSymbols localSymbols
             | None -> failwith "TinyFS: Cannot parse this Extended expression type"
         | _ -> failwith (buildExprError expr)
+    | Call (callee, info, typ, _) ->
+        match info.MemberRef with
+        | Some memRef ->
+            let memberName = getMemberName memRef
+
+            let index =
+                if functionSymbols.ContainsKey memberName then
+                    let (_, idx) = functionSymbols[memberName]
+                    idx
+                else
+                    failwith "TinyFS: Cannot find function name in FunctionSymbols table"
+
+            let callWasm = appendSinList INSTR_CALL (i32 index)
+            callWasm
+        | None -> failwith "TinyFS: Cannot handle CallInfo with no MemberRef"
     | _ -> failwith (buildExprError expr)
-
-//let argsToWasm (args: Ident list) : byte list =
-//    let mutable arguBytes: byte list = [||]
-
-//    for arg in args do
-//        //let argTree = expressionToWasm args symbols symbolMap
-//        arguBytes <- concatArr arguBytes [||]
-
-//    arguBytes
 
 let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) (decls: Declaration list) =
     for decl in decls do
         match decl with
         | ModuleDeclaration modDecl -> convertToModuleSymbolList moduleSymbolList modDecl.Members
         | MemberDeclaration memDecl ->
-            let name = memDecl.Name
+            let name = getMemberName memDecl.MemberRef
             let locals = new LocalSymbolDict()
             let last = moduleSymbolList.Last.Value
 
@@ -405,7 +415,7 @@ let rec defineFunctionDecls (decls: Declaration list) (functionSymbols: Function
                 //need logic for handling module let bindings that have no parameters
                 //if that a zero parameter function? Or is that a module wide variable??
                 //does it matter??
-                let name = memDecl.Name
+                let name = getMemberName memDecl.MemberRef
 
                 let (symbolsOfFunction, localVars) =
                     if functionSymbols.ContainsKey name then

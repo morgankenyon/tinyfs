@@ -40,11 +40,35 @@ let x () = {expr}
 
     printWasm wasmBytes
 
-    let response = wasmBytes |> runFuncInt32Return "Test_x"
+    let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(expected)
 
-//TODO: Error message returned from Fable when it cannot find a function
-//Leaves a lot to be desired
+[<Theory>]
+[<InlineData("1", 1)>]
+[<InlineData("1 + 3", 4)>]
+[<InlineData("1 - 3", -2)>]
+[<InlineData("10 / 2", 5)>]
+[<InlineData("11 / 2", 5)>]
+[<InlineData("14 / 5", 2)>]
+[<InlineData("10 * 15", 150)>]
+[<InlineData("10 * 15 + 10", 160)>]
+[<InlineData("10 * (15 + 10)", 250)>]
+let ``Can call other functions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let x () = {expr}
+let y () = x()
+"""
+
+    let wasmBytes = getDeclarations input |> compile
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "y"
+    response.Should().Be(expected)
+
 [<Fact>]
 let ``Can call another function`` () =
     let input =
@@ -52,14 +76,14 @@ let ``Can call another function`` () =
 module Test
 
 let x () = 1
-let y () = Test_x()
+let y () = x()
 """
 
     let wasmBytes = getDeclarations input |> compile
 
     printWasm wasmBytes
 
-    let response = wasmBytes |> runFuncInt32Return "Test_y"
+    let response = wasmBytes |> runFuncInt32Return "y"
     response.Should().Be(1)
 
 [<Fact>]
@@ -75,7 +99,7 @@ let x = 1
     let functionSymbols = buildModuleSymbolList decls |> getSymbols
 
     % functionSymbols.Should().HaveLength(1)
-    let hasKey = functionSymbols.ContainsKey "Test_x"
+    let hasKey = functionSymbols.ContainsKey "x"
     % hasKey.Should().BeTrue()
 
 [<Fact>]
@@ -94,18 +118,15 @@ let z = 1
 
     % functionSymbols.Should().HaveLength(3)
 
-    % (functionSymbols.ContainsKey "Test_x").Should()
-        .BeTrue()
+    % (functionSymbols.ContainsKey "x").Should().BeTrue()
 
-    % (functionSymbols.ContainsKey "Test_y").Should()
-        .BeTrue()
+    % (functionSymbols.ContainsKey "y").Should().BeTrue()
 
-    % (functionSymbols.ContainsKey "Test_z").Should()
-        .BeTrue()
+    % (functionSymbols.ContainsKey "z").Should().BeTrue()
 
-    let (xDict, xIndex) = functionSymbols["Test_x"]
-    let (yDict, yIndex) = functionSymbols["Test_y"]
-    let (zDict, zIndex) = functionSymbols["Test_z"]
+    let (xDict, xIndex) = functionSymbols["x"]
+    let (yDict, yIndex) = functionSymbols["y"]
+    let (zDict, zIndex) = functionSymbols["z"]
 
     % xDict.Count.Should().Be(0)
     % xIndex.Should().Be(0)

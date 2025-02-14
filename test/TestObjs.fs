@@ -16,7 +16,7 @@ type TestCompiler(currentFile, options, fileText, ?logs: ResizeArray<LogEntry>) 
 
     interface Fable.Compiler with
         member _.Options = options
-        member _.Plugins: Fable.CompilerPlugins = raise (System.NotImplementedException())
+        member _.Plugins: Fable.CompilerPlugins = { MemberDeclarationPlugins = Map.empty }
         member _.LibraryDir: string = raise (System.NotImplementedException())
         member _.CurrentFile: string = currentFile
         member _.OutputDir: string option = raise (System.NotImplementedException())

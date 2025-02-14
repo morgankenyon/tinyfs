@@ -33,7 +33,7 @@ let ``Can compile and run simple wasm program`` expr expected =
         $"""
 module Test
 
-let x = {expr}
+let x () = {expr}
 """
 
     let wasmBytes = getDeclarations input |> compile
@@ -74,9 +74,15 @@ let z = 1
     let functionSymbols = buildModuleSymbolList decls |> getSymbols
 
     % functionSymbols.Should().HaveLength(3)
-    % (functionSymbols.ContainsKey "Test_x").Should().BeTrue()
-    % (functionSymbols.ContainsKey "Test_y").Should().BeTrue()
-    % (functionSymbols.ContainsKey "Test_z").Should().BeTrue()
+
+    % (functionSymbols.ContainsKey "Test_x").Should()
+        .BeTrue()
+
+    % (functionSymbols.ContainsKey "Test_y").Should()
+        .BeTrue()
+
+    % (functionSymbols.ContainsKey "Test_z").Should()
+        .BeTrue()
 
     let (xDict, xIndex) = functionSymbols["Test_x"]
     let (yDict, yIndex) = functionSymbols["Test_y"]

@@ -6,26 +6,27 @@ open Wasmtime
 
 
 
-let printWasm (bytes: byte array) =
+let printWasm (bytes: byte list) =
     let stringRepresentation =
         bytes
-        |> Array.map (fun by -> by.ToString())
+        |> List.map (fun by -> by.ToString())
         |> String.concat ""
     //let str = stringRepresentation |> String.concat ""
     System.IO.File.WriteAllText("./atest.txt", stringRepresentation)
-    System.IO.File.WriteAllBytes("./atest.wasm", bytes)
+    System.IO.File.WriteAllBytes("./atest.wasm", List.toArray bytes)
 
-let private buildInstance (wasmBytes: byte array) =
+let private buildInstance (wasmBytes: byte list) =
     let engine = new Engine()
 
-    let modd = Module.FromBytes(engine, "fsharpWasm", wasmBytes)
+    let byteArray = List.toArray wasmBytes
+    let modd = Module.FromBytes(engine, "fsharpWasm", byteArray)
 
     let linker = new Linker(engine)
     let store = new Store(engine)
 
     linker.Instantiate(store, modd)
 
-let runFuncInt32Return (funcName: string) (wasmBytes: byte array) =
+let runFuncInt32Return (funcName: string) (wasmBytes: byte list) =
     let instance = buildInstance wasmBytes
 
     let func = instance.GetFunction<int32>(funcName)

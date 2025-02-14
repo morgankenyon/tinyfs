@@ -13,6 +13,11 @@ let getDeclarations (input: string) =
     let fableFile = getAst input
     fableFile.Declarations
 
+let getSymbols (symbolScope: SymbolScope) =
+    match symbolScope.First.Value with
+    | Nested nested -> nested
+    | Locals _ -> failwith "TinyFS: Should not be locals in compile"
+
 [<Theory>]
 [<InlineData("1", 1)>]
 [<InlineData("1 + 3", 4)>]
@@ -35,7 +40,7 @@ let x = {expr}
 
     printWasm wasmBytes
 
-    let response = wasmBytes |> runFuncInt32Return "main"
+    let response = wasmBytes |> runFuncInt32Return "Test_x"
     response.Should().Be(expected)
 
 [<Fact>]
@@ -48,15 +53,11 @@ let x = 1
 """
 
     let decls = getDeclarations input
-    let symbolMap = buildSymbolMap decls
+    let symbols = buildSymbolMap decls |> getSymbols
 
-    % symbolMap.Should().HaveLength(1)
-    let hasKey = symbolMap.ContainsKey "Test_x"
+    % symbols.Should().HaveLength(1)
+    let hasKey = symbols.ContainsKey "Test_x"
     % hasKey.Should().BeTrue()
-
-    let xVal = symbolMap["Test_x"]
-    % xVal.index.Should().Be(0)
-    % xVal.symbolType.Should().Be(SymbolType.Local)
 
 [<Fact>]
 let ``Can test building symbol table with three entries`` () =
@@ -70,13 +71,25 @@ let z = 1
 """
 
     let decls = getDeclarations input
-    let symbolMap = buildSymbolMap decls
+    let symbols = buildSymbolMap decls |> getSymbols
 
-    % symbolMap.Should().HaveLength(3)
-    % (symbolMap.ContainsKey "Test_x").Should().BeTrue()
-    % (symbolMap.ContainsKey "Test_y").Should().BeTrue()
-    % (symbolMap.ContainsKey "Test_z").Should().BeTrue()
+    % symbols.Should().HaveLength(3)
+    % (symbols.ContainsKey "Test_x").Should().BeTrue()
+    % (symbols.ContainsKey "Test_y").Should().BeTrue()
+    % (symbols.ContainsKey "Test_z").Should().BeTrue()
 
-    % (symbolMap["Test_x"]).index.Should().Be(0)
-    % (symbolMap["Test_y"]).index.Should().Be(1)
-    % (symbolMap["Test_z"]).index.Should().Be(2)
+    let (xDict, xIndex) = symbols["Test_x"]
+    let (yDict, yIndex) = symbols["Test_y"]
+    let (zDict, zIndex) = symbols["Test_z"]
+
+    % xDict.Count.Should().Be(0)
+    % xIndex.Should().Be(0)
+
+    % yDict.Count.Should().Be(0)
+    % yIndex.Should().Be(1)
+
+    % zDict.Count.Should().Be(0)
+    % zIndex.Should().Be(2)
+
+//[<Fact>]
+//let ``Can build function declarations`` () =

@@ -4,8 +4,13 @@
 
 A F# to Wasm Compiler.
 
-Current status: Nothing works.
+Current status: Basic int32 arithmetic operators work. 
 
-Using the FSharpCompilerService to get a F# Abstract Syntax Tree (AST), then converting to a Wasm/Wat AST.
+Everything is currently run through unit tests, there's no CLI to auto compiler a file or fsproj.
 
-Heavily leveraging [Fable](https://github.com/fable-compiler/Fable/blob/main/src/Fable.Transforms/FSharp2Fable.fs) for converting F# AST to Wasm/Wat AST.
+## How Is This Working
+
+Using [Fable](https://github.com/fable-compiler/Fable) to generate a usable Abstract Syntax Tree (AST) given F# code.
+
+Then using what I learned in [WebAssembly from the Ground Up](https://wasmgroundup.com/) for converting the Fable AST to Wasm.
+

@@ -87,6 +87,40 @@ let y () = x(8)
     response.Should().Be(9)
 
 [<Fact>]
+let ``Can call another function with multiple curried parameters`` () =
+    let input =
+        $"""
+module Test
+
+let x a b c d = 1 + a + b + c + d
+let y () = x 2 3 4 5
+"""
+
+    let wasmBytes = getDeclarations input |> compile
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "y"
+    response.Should().Be(15)
+
+[<Fact>]
+let ``Can call another function with multiple grouped parameters`` () =
+    let input =
+        $"""
+module Test
+
+let x (a, b, c, d) = 1 + a + b + c + d
+let y () = x(2, 3, 4, 5)
+"""
+
+    let wasmBytes = getDeclarations input |> compile
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "y"
+    response.Should().Be(15)
+
+[<Fact>]
 let ``Can test building symbol table with single entry`` () =
     let input =
         """

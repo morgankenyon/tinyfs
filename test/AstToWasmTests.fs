@@ -70,13 +70,13 @@ let y () = x()
     response.Should().Be(expected)
 
 [<Fact>]
-let ``Can call another function`` () =
+let ``Can call another function with parameter`` () =
     let input =
         $"""
 module Test
 
-let x () = 1
-let y () = x()
+let x (m) = 1 + m
+let y () = x(8)
 """
 
     let wasmBytes = getDeclarations input |> compile
@@ -84,7 +84,7 @@ let y () = x()
     printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "y"
-    response.Should().Be(1)
+    response.Should().Be(9)
 
 [<Fact>]
 let ``Can test building symbol table with single entry`` () =

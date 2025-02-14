@@ -342,7 +342,7 @@ let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymb
             | Some exExpr -> exprToWasm exExpr functionSymbols localSymbols
             | None -> failwith "TinyFS: Cannot parse this Extended expression type"
         | _ -> failwith (buildExprError expr)
-    | Call (callee, info, typ, _) ->
+    | Call (_, info, _, _) ->
         match info.MemberRef with
         | Some memRef ->
             let memberName = getMemberName memRef
@@ -354,9 +354,26 @@ let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymb
                 else
                     failwith "TinyFS: Cannot find function name in FunctionSymbols table"
 
+            let argumentBytes =
+                info.Args
+                |> List.filter (fun arg -> arg.Type <> Type.Unit)
+                |> List.map (fun arg -> exprToWasm arg functionSymbols localSymbols)
+                |> List.collect id
+
             let callWasm = appendSinList INSTR_CALL (i32 index)
-            callWasm
+
+            let wasmBytes = aList2 argumentBytes callWasm
+
+            wasmBytes
         | None -> failwith "TinyFS: Cannot handle CallInfo with no MemberRef"
+    | IdentExpr (ident) ->
+        let symbol = resolveSymbols localSymbols ident.Name
+
+        match symbol with
+        | Ok sy ->
+            let identWasm = appendSinList INSTR_LOCAL_GET (i32 sy.index)
+            identWasm
+        | Error msg -> failwith (sprintf "TinyFS: %s" msg)
     | _ -> failwith (buildExprError expr)
 
 let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) (decls: Declaration list) =

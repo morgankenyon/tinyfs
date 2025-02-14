@@ -6,65 +6,88 @@ open Fable.AST.Fable
 
 [<Literal>]
 let SECTION_ID_TYPE = 0x1uy
+
 [<Literal>]
 let SECTION_ID_FUNCTION = 0x3uy
+
 [<Literal>]
 let SECTION_ID_EXPORT = 0x7uy
+
 [<Literal>]
 let SECTION_ID_CODE = 0xAuy
+
 [<Literal>]
 let INSTR_END = 0xBuy
+
+[<Literal>]
+let INSTR_CALL = 0x10uy
+
 [<Literal>]
 let INSTR_LOCAL_GET = 0x20uy
+
 [<Literal>]
 let INSTR_LOCAL_SET = 0x21uy
+
 [<Literal>]
 let INSTR_LOCAL_TEE = 0x22uy
+
 [<Literal>]
 let i32_CONST = 0x41uy
+
 [<Literal>]
 let i64_CONST = 0x42uy
+
 [<Literal>]
 let f32_CONST = 0x43uy
+
 [<Literal>]
 let f64_CONST = 0x44uy
+
 [<Literal>]
 let TYPE_FUNCTION = 0x60uy
+
 [<Literal>]
 let INSTR_i32_ADD = 0x6Auy
+
 [<Literal>]
 let INSTR_i32_SUB = 0x6Buy
+
 [<Literal>]
 let INSTR_i32_MUL = 0x6Cuy
+
 [<Literal>]
 let INSTR_i32_DIV_S = 0x6Duy
+
 [<Literal>]
 let INSTR_i32_MOD_S = 0x6Fuy
+
 [<Literal>]
 let f64_VAL_TYPE = 0x7Cuy
+
 [<Literal>]
 let f32_VAL_TYPE = 0x7Duy
+
 [<Literal>]
 let i64_VAL_TYPE = 0x7Euy
+
 [<Literal>]
 let i32_VAL_TYPE = 0x7Fuy
 
 
-type SymbolType =
-| Local
+type SymbolType = | Local
+
 type SymbolEntry =
-    {
-        name: string
-        index: int
-        symbolType: SymbolType 
-    }
+    { name: string
+      index: int
+      symbolType: SymbolType }
+
 type SymbolMapDict = System.Collections.Generic.Dictionary<string, SymbolEntry>
 
-let stringToBytes (s: string) =
-    System.Text.Encoding.UTF8.GetBytes(s)
+let stringToBytes (s: string) = System.Text.Encoding.UTF8.GetBytes(s)
 
 let int32ToBytes (v: int32) =
-    let bytes = BitConverter.GetBytes(v);
+    let bytes = BitConverter.GetBytes(v)
+
     match BitConverter.IsLittleEndian with
     | true -> bytes
     | false -> Array.rev bytes
@@ -79,11 +102,11 @@ let uint32ToBytes (v: uint32) =
 let magic () =
     // [0x00, 0x61, 0x73, 0x6d]
     let nullChar = Convert.ToChar(0).ToString()
-    stringToBytes($"{nullChar}asm")
+    stringToBytes ($"{nullChar}asm")
 
 let version () =
     // [0x01, 0x00, 0x00, 0x00]
-    int32ToBytes(1)
+    int32ToBytes (1)
 
 [<Literal>]
 let SEVEN_BIT_MASK = 0x7f
@@ -114,6 +137,7 @@ let u32 (v: uint32) =
                 b
 
         r <- Array.concat [ r; [| newVall |] ]
+
     r
 
 let i32 (v: int32) : byte array =
@@ -137,63 +161,58 @@ let i32 (v: int32) : byte array =
                 b ||| CONTINUATION_BIT
 
         r <- Array.concat [ r; [| nextVall |] ]
+
     r
 
 ///Array helper methods
 let toArr ele = [| ele |]
 //Concats two arrays together
-let concatArr a1 a2 =
-    Array.concat [ a1; a2 ]
+let concatArr a1 a2 = Array.concat [ a1; a2 ]
 let concatA a1 a2 = concatArr a1 a2
 //Concats one single element with an array
-let concatSinArr s a =
-    Array.concat [ [| s |]; a]
+let concatSinArr s a = Array.concat [ [| s |]; a ]
 //Concats an array with a single element
-let concatArrSin a s =
-    Array.concat [ a; [| s|] ]
+let concatArrSin a s = Array.concat [ a; [| s |] ]
+
 let section (id: byte) (contents: byte array) =
     let normalizedSize = i32 contents.Length
     let headers = concatSinArr id normalizedSize
     concatArr headers contents
+
 let vec (elements: byte array) =
     let normalizedSize = i32 elements.Length
     concatArr normalizedSize elements
 
 let vecFlatten (elements: byte array array) =
     let normalizedSize = i32 elements.Length
-    let flattenedElements = elements
-                            |> Array.collect id
+    let flattenedElements = elements |> Array.collect id
     concatArr normalizedSize flattenedElements
 
 //Type Section
 let functype (paramTypes: byte array, resultTypes: byte array) =
     let paramVec = vec paramTypes
     let resultVec = vec resultTypes
-    Array.concat [ [| TYPE_FUNCTION |]; paramVec; resultVec ]
 
-let typesec (functypes : byte array array) =
+    Array.concat [ [| TYPE_FUNCTION |]
+                   paramVec
+                   resultVec ]
+
+let typesec (functypes: byte array array) =
     let funcVec = vecFlatten functypes
     section SECTION_ID_TYPE funcVec
 
 //Function Section
-let funcsec (typeidxs : byte array array) =
-    vecFlatten typeidxs
-    |> section SECTION_ID_FUNCTION
+let funcsec (typeidxs: byte array array) =
+    vecFlatten typeidxs |> section SECTION_ID_FUNCTION
 
 //Export section
-let exportdesc (idx: byte) =
-    [| 0uy; idx |]
-let name (s: string) =
-    s
-    |> stringToBytes
-    |> vec
+let exportdesc (idx: byte) = [| 0uy; idx |]
+let name (s: string) = s |> stringToBytes |> vec
 
-let export (s: string) (exportDesc: byte array) =
-    concatArr (name(s)) exportDesc
+let export (s: string) (exportDesc: byte array) = concatArr (name (s)) exportDesc
 
 let exportsec (exports: byte array array) =
-    vecFlatten exports
-    |> section SECTION_ID_EXPORT
+    vecFlatten exports |> section SECTION_ID_EXPORT
 
 //Code section
 let code (func: byte array) =
@@ -205,14 +224,14 @@ let func (locals: byte array) (body: byte array) =
     concatArr localsVec body
 
 let codesec (codes: byte array array) =
-    vecFlatten codes
-    |> section SECTION_ID_CODE
+    vecFlatten codes |> section SECTION_ID_CODE
 
-let modd(sections: byte array array) =
-    let flattenedSections = 
-        sections
-        |> Array.collect id
-    Array.concat [ magic(); version(); flattenedSections ]
+let modd (sections: byte array array) =
+    let flattenedSections = sections |> Array.collect id
+
+    Array.concat [ magic ()
+                   version ()
+                   flattenedSections ]
 
 
 ///Start converting functions
@@ -239,41 +258,40 @@ let operatorToWasm (op: BinaryOperator) (typ: NumberKind) =
 
 let resolveSymbols (symbolMap: SymbolMapDict) (name: string) =
     let containsKey = symbolMap.ContainsKey name
+
     match containsKey with
-    | true ->            
+    | true ->
         let symbol = symbolMap[name]
         Ok symbol
-    | false ->
-        Error $"Error: undeclared identifier: {name}"
+    | false -> Error $"Error: undeclared identifier: {name}"
 
 let rec exprToWasm (expr: Expr) (symbolMap: SymbolMapDict) : byte array =
     match expr with
-    | Operation(kind, tags, typ, _) ->
+    | Operation (kind, tags, typ, _) ->
         match kind, typ with
-        | Binary(operator, left, right), Number(numKind, _)->
-            let operatorWasm = 
-                operatorToWasm operator numKind
-                |> toArr
+        | Binary (operator, left, right), Number (numKind, _) ->
+            let operatorWasm = operatorToWasm operator numKind |> toArr
             let leftWasm = exprToWasm left symbolMap
             let rightWasm = exprToWasm right symbolMap
 
-            Array.concat [| leftWasm; rightWasm; operatorWasm |]
-        | Unary(_, operand), Number(_, _) ->
+            Array.concat [| leftWasm
+                            rightWasm
+                            operatorWasm |]
+        | Unary (_, operand), Number (_, _) ->
             //In F#, integer division needs to return an INT
             //So division is wrapped in an Unary expression
             //to return an INT versus a float
             //But I don't think we need that in Wasm
             exprToWasm operand symbolMap
-        | Unary(_, operand), Any ->
+        | Unary (_, operand), Any ->
             //Also used for F# integer division referenced above
             exprToWasm operand symbolMap
         | _ -> failwith "TinyFS: Unsupported Operation type"
-    | Value(kind, _) ->
+    | Value (kind, _) ->
         match kind with
-        | NumberConstant(value, _) ->
+        | NumberConstant (value, _) ->
             match value with
-            | NumberValue.Int32 num ->  
-                concatSinArr i32_CONST (i32 num)
+            | NumberValue.Int32 num -> concatSinArr i32_CONST (i32 num)
             | _ -> failwith "TinyFS: Not supporting int64s right now"
         | _ -> failwith "TinyFS: Unsupported value type"
     | _ -> failwith "TinyFS: Unsupported expression type"
@@ -284,51 +302,51 @@ let argsToWasm (args: Ident list) : byte array =
     for arg in args do
         //let argTree = expressionToWasm args symbols symbolMap
         arguBytes <- concatArr arguBytes [||]
+
     arguBytes
-let rec declationToWasm (decl : Declaration) (symbolMap : SymbolMapDict): byte array =
+
+let rec declationToWasm (decl: Declaration) (symbolMap: SymbolMapDict) : byte array =
     match decl with
-    | ModuleDeclaration modDecl ->
-        declarationsToWasm modDecl.Members symbolMap
+    | ModuleDeclaration modDecl -> declarationsToWasm modDecl.Members symbolMap
     | MemberDeclaration memDecl when memDecl.Args.Length > 0 ->
         //let argumentBytes = argsToWasm memDecl.Args
         //let valueBytes =
         //    concatSinArr INSTR_LOCAL_SET (i32 0)
         let innerBytes = exprToWasm memDecl.Body symbolMap
         innerBytes
-        //concatArr innerBytes valueBytes
-    | MemberDeclaration memDecl ->
-        exprToWasm memDecl.Body symbolMap
+    //concatArr innerBytes valueBytes
+    | MemberDeclaration memDecl -> exprToWasm memDecl.Body symbolMap
     | _ -> failwith "TinyFS: Unsupported declaration type"
 
-and declarationsToWasm (decls : Declaration list) (symbolMap : SymbolMapDict) : byte array =
-    let mutable wasmBytes : byte array = [||]
+and declarationsToWasm (decls: Declaration list) (symbolMap: SymbolMapDict) : byte array =
+    let mutable wasmBytes: byte array = [||]
 
     for decl in decls do
         let ddd = declationToWasm decl symbolMap
         wasmBytes <- concatArr wasmBytes ddd
-    
-    wasmBytes
 
+    wasmBytes
 
 let rec convertToSymbolMap (symbolMap: SymbolMapDict) (decls: Declaration list) =
     for decl in decls do
         match decl with
-        | ModuleDeclaration modDecl ->
-            convertToSymbolMap symbolMap modDecl.Members
+        | ModuleDeclaration modDecl -> convertToSymbolMap symbolMap modDecl.Members
         | MemberDeclaration memDecl ->
             let name = memDecl.Name
+
             let symbolEntry =
-                {
-                    name = name
-                    index = symbolMap.Count
-                    symbolType = SymbolType.Local
-                }
+                { name = name
+                  index = symbolMap.Count
+                  symbolType = SymbolType.Local }
+
             symbolMap.Add(name, symbolEntry)
             ()
         | _ -> failwith "TinyFS: Unsupported declaration type for symbolmap"
+
     ()
+
 let buildSymbolMap (decls: Declaration list) =
-    let symbolMap = new SymbolMapDict();
+    let symbolMap = new SymbolMapDict()
 
     convertToSymbolMap symbolMap decls
     symbolMap
@@ -339,34 +357,81 @@ let generateWasm (decls: Declaration list) : byte array =
 
     concatArrSin wasmBytes INSTR_END
 
+//let rec defineFunctionDecls (statement: Ast.Statement) (symbols: NestedSymbolDict) : WasmFuncBytes array =
+//    match statement.StateType() with
+//    | Ast.StatementType.BlockStatement ->
+//        let block = statement :?> Ast.BlockStatement
+//        let mutable funcBytes : WasmFuncBytes array = [| |]
+//        for state in block.statements do
+//            let stateBytes = defineFunctionDecls state symbols
+//            funcBytes <- Array.concat [ funcBytes; stateBytes ]
+//        funcBytes
+
+//    | Ast.StatementType.FunctionStatement ->
+//        let funcState = statement :?> Ast.FunctionStatement
+//        let name = funcState.name.value
+
+//        let (funcSymbols, localVars) =
+//            if symbols.ContainsKey name
+//            then
+//                let (currentSymbols, _) = symbols[name]
+//                let mutable symbolValues : SymbolEntry array = [| |]
+//                for sym in currentSymbols.Values do
+//                    symbolValues <- Array.concat [ symbolValues; [| sym |] ]
+//                (currentSymbols, symbolValues)
+//            else (new SymbolDict(), [| |])
+//        let paramVals =
+//            localVars
+//            |> Array.filter (fun se -> se.symbolType = SymbolType.Param)
+//        let paramTypes =
+//            paramVals
+//            |> Array.map (fun _ -> i32_VAL_TYPE)
+//        let varsCount =
+//            localVars
+//            |> Array.filter (fun se -> se.symbolType = SymbolType.Local)
+//            |> Array.length
+//        let bodyWasm =
+//            statementToWasmTree funcState symbols funcSymbols
+//            |> wasmTreeToBytes
+//        let functionDecls : WasmFuncBytes array = [|
+//            {
+//                name = name
+//                paramTypes = paramTypes
+//                resultType = i32_VAL_TYPE
+//                locals = [| locals varsCount i32_VAL_TYPE |]
+//                body = Array.concat [ bodyWasm; [| INSTR_END |]]
+//            }
+//        |]
+//        functionDecls
+//    | _ -> [| |]
+
 //Overall compile function
-let compile (decls : Declaration list) : byte array =
+let compile (decls: Declaration list) : byte array =
     let emptyBytes: byte [] = Array.zeroCreate 0
 
     //Creating type section
-    let funcType = functype(emptyBytes, [| i32_VAL_TYPE |])
-    let typeSection = typesec([| funcType |])
+    let funcType = functype (emptyBytes, [| i32_VAL_TYPE |])
+    let typeSection = typesec ([| funcType |])
 
     //creating func section
-    let funcSection = funcsec([| [|0uy|] |])
+    let funcSection = funcsec ([| [| 0uy |] |])
 
     //creating export section
-    let exportDesc = exportdesc(0uy)
+    let exportDesc = exportdesc (0uy)
     let export = export "main" exportDesc
     let exportSection = exportsec [| export |]
 
     //creating code section
-    let functions =
-        generateWasm decls
-        |> func emptyBytes
+    let functions = generateWasm decls |> func emptyBytes
     let code = code functions
-    let codeSection = 
-        codesec [| code |]
+    let codeSection = codesec [| code |]
 
-    let sections = [| typeSection; funcSection; exportSection; codeSection |]
+    let sections =
+        [| typeSection
+           funcSection
+           exportSection
+           codeSection |]
 
-    let wasmBytes =
-        sections
-        |> modd
+    let wasmBytes = sections |> modd
 
     wasmBytes

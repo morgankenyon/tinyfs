@@ -6,20 +6,14 @@ open FSharp.Compiler.Text
 open Fable.Transforms.State
 open Fable
 
-type TestCompiler
-    (
-        currentFile,
-        options,
-        fileText,
-        ?logs: ResizeArray<LogEntry>
-    )
-    =
+type TestCompiler(currentFile, options, fileText, ?logs: ResizeArray<LogEntry>) =
 
     let mutable counter = -1
     let logs = Option.defaultWith ResizeArray logs
 
     member _.fileText = fileText
-    static member Checker :FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
+    static member Checker: FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
+
     interface Fable.Compiler with
         member _.Options = options
         member _.Plugins: Fable.CompilerPlugins = raise (System.NotImplementedException())
@@ -32,11 +26,11 @@ type TestCompiler
 
         member _.IsPrecompilingInlineFunction: bool = false
 
-        member this.IncrementCounter(): int = 
+        member this.IncrementCounter() : int =
             counter <- counter + 1
             counter
 
-        member this.WillPrecompileInlineFunction(file: string): Fable.Compiler = 
+        member this.WillPrecompileInlineFunction(file: string) : Fable.Compiler =
             raise (System.NotImplementedException())
 
         member this.GetImplementationFile(_: string) =
@@ -49,29 +43,30 @@ type TestCompiler
                     checker.GetProjectOptionsFromScript(file, SourceText.ofString input, assumeDotNetFramework = false)
                     |> Async.RunSynchronously
 
-                checker.ParseAndCheckProject(projOptions) 
-                    |> Async.RunSynchronously
+                checker.ParseAndCheckProject(projOptions)
+                |> Async.RunSynchronously
 
             let getDeclarations checker (input: string) =
                 let checkProjectResults = parseAndCheckSingleFile checker input
                 let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
 
                 checkedFile.Declarations
+
             let decls = getDeclarations TestCompiler.Checker this.fileText
             decls
 
-        member this.GetRootModule(fileName: string)  = 
+        member this.GetRootModule(fileName: string) =
             let fileName = Path.normalizePathAndEnsureFsExtension fileName
 
             "", None // failwith msg
 
-        member this.TryGetEntity(arg1: Fable.AST.Fable.EntityRef): Fable.AST.Fable.Entity option = 
+        member this.TryGetEntity(arg1: Fable.AST.Fable.EntityRef) : Fable.AST.Fable.Entity option =
             raise (System.NotImplementedException())
 
-        member this.GetInlineExpr(arg1: string): Fable.InlineExpr = 
+        member this.GetInlineExpr(arg1: string) : Fable.InlineExpr =
             raise (System.NotImplementedException())
 
-        member this.AddWatchDependency(file: string): unit = 
+        member this.AddWatchDependency(file: string) : unit =
             raise (System.NotImplementedException())
 
         member _.AddLog(msg, severity, ?range, ?fileName: string, ?tag: string) =

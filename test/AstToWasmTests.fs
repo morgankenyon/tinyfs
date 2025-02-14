@@ -12,6 +12,8 @@ open Xunit
 [<InlineData("1 + 3", 4)>]
 [<InlineData("1 - 3", -2)>]
 [<InlineData("10 / 2", 5)>]
+[<InlineData("11 / 2", 5)>]
+[<InlineData("14 / 5", 2)>]
 [<InlineData("10 * 15", 150)>]
 [<InlineData("10 * 15 + 10", 160)>]
 [<InlineData("10 * (15 + 10)", 250)>]

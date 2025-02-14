@@ -261,6 +261,7 @@ let rec exprToWasm (expr: Expr) (symbolMap: SymbolMapDict) : byte array =
         | Unary(_, operand), Number(_, _) ->
             //In F#, integer division needs to return an INT
             //So division is wrapped in an Unary expression
+            //to return an INT versus a float
             //But I don't think we need that in Wasm
             exprToWasm operand symbolMap
         | Unary(_, operand), Any ->

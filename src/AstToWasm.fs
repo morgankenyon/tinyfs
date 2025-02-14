@@ -301,6 +301,8 @@ let resolveSymbols (localSymbols: LocalSymbolDict) (name: string) =
         Ok symbol
     | false -> Error $"Error: undeclared identifier: {name}"
 
+let buildExprError (expr: Expr) =
+    (sprintf "TinyFS: '%s' is currently an unsupported expression type" (expr.GetType().ToString()))
 let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymbols: LocalSymbolDict) : byte list =
     match expr with
     | Operation (kind, _, typ, _) ->
@@ -328,7 +330,15 @@ let rec exprToWasm (expr: Expr) (functionSymbols: FunctionSymbolDict) (localSymb
             | NumberValue.Int32 num -> appendSinList i32_CONST (i32 num)
             | _ -> failwith "TinyFS: Not supporting int64s right now"
         | _ -> failwith "TinyFS: Unsupported value type"
-    | _ -> failwith "TinyFS: Unsupported expression type"
+    | Extended(extendedSet, _) ->
+        match extendedSet with
+        | Throw (exExprOpt, typ) ->
+            match exExprOpt with
+            | Some exExpr ->
+                exprToWasm exExpr functionSymbols localSymbols
+            | None -> failwith "TinyFS: Cannot parse this Extended expression type"
+        | _ -> failwith (buildExprError expr)
+    | _ -> failwith (buildExprError expr)
 
 //let argsToWasm (args: Ident list) : byte list =
 //    let mutable arguBytes: byte list = [||]

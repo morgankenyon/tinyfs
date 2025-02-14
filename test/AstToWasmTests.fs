@@ -43,6 +43,25 @@ let x () = {expr}
     let response = wasmBytes |> runFuncInt32Return "Test_x"
     response.Should().Be(expected)
 
+//TODO: Error message returned from Fable when it cannot find a function
+//Leaves a lot to be desired
+[<Fact>]
+let ``Can call another function`` () =
+    let input =
+        $"""
+module Test
+
+let x () = 1
+let y () = Test_x()
+"""
+
+    let wasmBytes = getDeclarations input |> compile
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "Test_y"
+    response.Should().Be(1)
+
 [<Fact>]
 let ``Can test building symbol table with single entry`` () =
     let input =

@@ -6,18 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Util.fs" />
     <Compile Include="Objs.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Fable\src\Fable.Compiler\Fable.Compiler.fsproj" />
-    <ProjectReference Include="..\..\Fable\src\Fable.Core\Fable.Core.fsproj" />
-    <ProjectReference Include="..\..\Fable\src\Fable.Transforms\Fable.Transforms.fsproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="../lib/fcs/FSharp.Compiler.Service.dll" />
-    <Reference Include="../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
-    <Reference Include="../lib/fcs/FSharp.Core.dll" />
   </ItemGroup>
 </Project>

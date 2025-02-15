@@ -28,10 +28,8 @@
     <ProjectReference Include="..\src\TinyFS.Core.fsproj" />
   </ItemGroup>
 
-	<ItemGroup>
-		<Reference Include="../lib/fcs/FSharp.Compiler.Service.dll" />
-		<Reference Include="../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
-		<Reference Include="../lib/fcs/FSharp.Core.dll" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="9.0.201" />
+  </ItemGroup>
 
 </Project>

@@ -3,8 +3,8 @@
 open FSharp.Compiler.CodeAnalysis
 open System.IO
 open FSharp.Compiler.Text
-open Fable.Transforms.State
-open Fable
+//open Fable.Transforms.State
+//open Fable
 
 //type TestCompiler(currentFile, options, fileText, ?logs: ResizeArray<LogEntry>) =
 

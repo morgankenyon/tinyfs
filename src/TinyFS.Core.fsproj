@@ -6,15 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="FSharpTypes.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="FSharpToAst.fs" />
     <Compile Include="AstToWasm.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Fable\src\Fable.Compiler\Fable.Compiler.fsproj" />
-    <ProjectReference Include="..\..\Fable\src\Fable.Core\Fable.Core.fsproj" />
-    <ProjectReference Include="..\..\Fable\src\Fable.Transforms\Fable.Transforms.fsproj" />
+    <PackageReference Include="FSharp.Compiler.Service" Version="43.9.201" />
   </ItemGroup>
 
 
@@ -23,6 +23,12 @@
     <Reference Include="../lib/fcs/FSharp.Compiler.Service.dll" />
     <Reference Include="../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
     <Reference Include="../lib/fcs/FSharp.Core.dll" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="9.0.201" />
   </ItemGroup>
 
 </Project>

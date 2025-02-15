@@ -3,6 +3,7 @@
 open Fable
 open TinyFS.Test.TestObjs
 open Wasmtime
+open TinyFS.Shared.Objs
 
 
 

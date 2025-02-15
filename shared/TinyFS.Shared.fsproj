@@ -1,17 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Program.fs" />
+    <Compile Include="Objs.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\shared\TinyFS.Shared.fsproj" />
-    <ProjectReference Include="..\src\TinyFS.Core.fsproj" />
+    <ProjectReference Include="..\..\Fable\src\Fable.Compiler\Fable.Compiler.fsproj" />
+    <ProjectReference Include="..\..\Fable\src\Fable.Core\Fable.Core.fsproj" />
+    <ProjectReference Include="..\..\Fable\src\Fable.Transforms\Fable.Transforms.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

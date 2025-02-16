@@ -5,7 +5,6 @@ open Faqt.Operators
 open Helpers
 open TinyFS.Core.AstToWasm
 open TinyFS.Core.FSharpToAst
-open TinyFS.Shared
 open Xunit
 open FSharp.Compiler.CodeAnalysis
 
@@ -36,7 +35,7 @@ let getSymbols (moduleSymbols: ModuleSymbolList) =
 [<InlineData("10 * 15", 150)>]
 [<InlineData("10 * 15 + 10", 160)>]
 [<InlineData("10 * (15 + 10)", 250)>]
-let ``Can compile and run simple wasm program`` expr expected =
+let ``Can compile and run simple wasm expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -50,133 +49,59 @@ let x () = {expr}
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(expected)
 
-//[<Theory>]
-//[<InlineData("1", 1)>]
-//[<InlineData("1 + 3", 4)>]
-//[<InlineData("1 - 3", -2)>]
-//[<InlineData("10 / 2", 5)>]
-//[<InlineData("11 / 2", 5)>]
-//[<InlineData("14 / 5", 2)>]
-//[<InlineData("10 * 15", 150)>]
-//[<InlineData("10 * 15 + 10", 160)>]
-//[<InlineData("10 * (15 + 10)", 250)>]
-//let ``Can call other functions`` expr expected =
-//    let input =
-//        $"""
-//module Test
+[<Theory>]
+[<InlineData("1", 1)>]
+[<InlineData("1 + 3", 4)>]
+[<InlineData("1 - 3", -2)>]
+[<InlineData("10 / 2", 5)>]
+[<InlineData("11 / 2", 5)>]
+[<InlineData("14 / 5", 2)>]
+[<InlineData("10 * 15", 150)>]
+[<InlineData("10 * 15 + 10", 160)>]
+[<InlineData("10 * (15 + 10)", 250)>]
+let ``Can call other functions`` expr expected =
+    let input =
+        $"""
+module Test
 
-//let x () = {expr}
-//let y () = x()
-//"""
+let x () = {expr}
+let y () = x()
+"""
 
-//    let wasmBytes = getDeclarations checker input |> compile
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
 
-//    printWasm wasmBytes
+    printWasm wasmBytes
 
-//    let response = wasmBytes |> runFuncInt32Return "y"
-//    response.Should().Be(expected)
+    let response = wasmBytes |> runFuncInt32Return "y"
+    response.Should().Be(expected)
 
-//[<Fact>]
-//let ``Can call another function with parameter`` () =
-//    let input =
-//        $"""
-//module Test
+[<Theory>]
+[<InlineData("1", 11)>]
+[<InlineData("1 + 3", 14)>]
+[<InlineData("1 - 3", 8)>]
+[<InlineData("10 / 2", 15)>]
+[<InlineData("11 / 2", 15)>]
+[<InlineData("14 / 5", 12)>]
+[<InlineData("10 * 15", 160)>]
+[<InlineData("10 * 15 + 10", 170)>]
+[<InlineData("10 * (15 + 10)", 260)>]
+let ``Can call other functions inside other expressions`` expr expected =
+    let input =
+        $"""
+module Test
 
-//let x (m) = 1 + m
-//let y () = x(8)
-//"""
+let x () = {expr}
+let y () = x() + 10
+"""
 
-//    let wasmBytes = getDeclarations checker input |> compile
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
 
-//    printWasm wasmBytes
+    printWasm wasmBytes
 
-//    let response = wasmBytes |> runFuncInt32Return "y"
-//    response.Should().Be(9)
-
-//[<Fact>]
-//let ``Can call another function with multiple curried parameters`` () =
-//    let input =
-//        $"""
-//module Test
-
-//let x a b c d = 1 + a + b + c + d
-//let y () = x 2 3 4 5
-//"""
-
-//    let wasmBytes = getDeclarations checker input |> compile
-
-//    printWasm wasmBytes
-
-//    let response = wasmBytes |> runFuncInt32Return "y"
-//    response.Should().Be(15)
-
-//[<Fact>]
-//let ``Can call another function with multiple grouped parameters`` () =
-//    let input =
-//        $"""
-//module Test
-
-//let x (a, b, c, d) = 1 + a + b + c + d
-//let y () = x(2, 3, 4, 5)
-//"""
-
-//    let wasmBytes = getDeclarations checker input |> compile
-
-//    printWasm wasmBytes
-
-//    let response = wasmBytes |> runFuncInt32Return "y"
-//    response.Should().Be(15)
-
-//[<Fact>]
-//let ``Can test building symbol table with single entry`` () =
-//    let input =
-//        """
-//module Test
-
-//let x = 1
-//"""
-
-//    let decls = getDeclarations checker input
-//    let functionSymbols = buildModuleSymbolList decls |> getSymbols
-
-//    % functionSymbols.Should().HaveLength(1)
-//    let hasKey = functionSymbols.ContainsKey "x"
-//    % hasKey.Should().BeTrue()
-
-//[<Fact>]
-//let ``Can test building symbol table with three entries`` () =
-//    let input =
-//        """
-//module Test
-
-//let x = 1
-//let y = 1
-//let z = 1
-//"""
-
-//    let decls = getDeclarations checker input
-//    let functionSymbols = buildModuleSymbolList decls |> getSymbols
-
-//    % functionSymbols.Should().HaveLength(3)
-
-//    % (functionSymbols.ContainsKey "x").Should().BeTrue()
-
-//    % (functionSymbols.ContainsKey "y").Should().BeTrue()
-
-//    % (functionSymbols.ContainsKey "z").Should().BeTrue()
-
-//    let (xDict, xIndex) = functionSymbols["x"]
-//    let (yDict, yIndex) = functionSymbols["y"]
-//    let (zDict, zIndex) = functionSymbols["z"]
-
-//    % xDict.Count.Should().Be(0)
-//    % xIndex.Should().Be(0)
-
-//    % yDict.Count.Should().Be(0)
-//    % yIndex.Should().Be(1)
-
-//    % zDict.Count.Should().Be(0)
-//    % zIndex.Should().Be(2)
+    let response = wasmBytes |> runFuncInt32Return "y"
+    response.Should().Be(expected)
 
 [<Fact>]
 let ``Can generated module symbols`` () =
@@ -215,3 +140,20 @@ let x () = 2342
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(2342)
+
+[<Fact>]
+let ``Can handle local params`` () =
+    let input =
+        $"""module Test
+
+let x () =
+    let y = 20
+    let z = 23
+    y + z
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    let response = wasmBytes |> runFuncInt32Return "x"
+    response.Should().Be(43)

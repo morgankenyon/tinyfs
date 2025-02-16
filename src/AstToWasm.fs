@@ -319,6 +319,14 @@ let buildDeclError decl =
 let buildExprError (expr: FSharpExpr) =
     (sprintf "TinyFS: '%s' is currently an unsupported expression type" (expr.GetType().ToString()))
 
+let private isOperator (memb: FSharpMemberOrFunctionOrValue) =
+    match memb.DeclaringEntity with
+    | Some de ->
+        match de.BasicQualifiedName with
+        | FS_OPERATOR -> (true, memb.CompiledName)
+        | _ -> (false, "")
+    | _ -> (false, "")
+
 let rec exprToWasm
     (expr: FSharpExpr)
     (functionSymbols: FunctionSymbolDict)
@@ -326,23 +334,40 @@ let rec exprToWasm
     : byte list =
     match expr with
     | FSharpExprPatterns.Call (expr, memb, ownerGenArgs, memberGenArgs, args) ->
-        match memb.DeclaringEntity with
-        | Some de ->
-            match de.BasicQualifiedName, args.Length with
-            | FS_OPERATOR, 2 ->
-                let opWasm =
-                    operatorToWasm memb.CompiledName Types.Int32
-                    |> toList
+        match isOperator memb with
+        | true, opName ->
+            match args.Length with
+            | 2 ->
+                let opWasm = operatorToWasm opName Types.Int32 |> toList
 
                 let leftWasm = exprToWasm args[0] functionSymbols localSymbols
                 let rightWasm = exprToWasm args[1] functionSymbols localSymbols
                 aList3 leftWasm rightWasm opWasm
-            | FS_OPERATOR, _ ->
+            | _ ->
                 failwith (
                     sprintf "TinyFS: Was not expecetd %d arguments with %s operator" args.Length memb.CompiledName
                 )
-            | _ -> failwith (sprintf "TinyFS: cannot handle callExpress with type %s" de.BasicQualifiedName)
-        | None -> failwith "TnyFS: Cannot handle call with empty DeclaringEntity"
+        | _ ->
+            let index =
+                if functionSymbols.ContainsKey memb.CompiledName then
+                    let (_, idx) = functionSymbols[memb.CompiledName]
+                    idx
+                else
+                    failwith (sprintf "TinyFS: Cannot find function '%s' in FunctionSymbols table" memb.CompiledName)
+
+            let argumentBytes =
+                args
+                |> List.filter (fun arg ->
+                    (getType arg.Type.BasicQualifiedName)
+                    <> Types.Unit)
+                |> List.map (fun arg -> exprToWasm arg functionSymbols localSymbols)
+                |> List.collect id
+
+            let callWasm = appendSinList INSTR_CALL (i32 index)
+
+            let wasmBytes = aList2 argumentBytes callWasm
+
+            wasmBytes
     | FSharpExprPatterns.Const (value, typ) ->
         let typ = getType typ.BasicQualifiedName
 

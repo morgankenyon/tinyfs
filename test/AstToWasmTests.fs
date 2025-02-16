@@ -5,6 +5,7 @@ open Faqt.Operators
 open Helpers
 open TinyFS.Core.AstToWasm
 open TinyFS.Core.FSharpToAst
+open TinyFS.Core.FSharpTypes
 open Xunit
 open FSharp.Compiler.CodeAnalysis
 
@@ -17,10 +18,10 @@ let checker: FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
 //    let fableFile = getAst declarations
 //    fableFile.Declarations
 
-let getSymbols (moduleSymbols: ModuleSymbolList) =
+let getModuleSymbols (moduleSymbols: ModuleSymbolList) =
     match moduleSymbols.First.Value with
-    | Function functions -> functions
-    | Locals _ -> failwith "TinyFS: Should not be locals in compile"
+    | Module modd -> modd
+    | Function _ -> failwith "TinyFS: Should not be functions in compile"
 
 [<Theory>]
 [<InlineData("1", 1)>]
@@ -45,6 +46,8 @@ let x () = {expr}
 
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(expected)
@@ -71,7 +74,7 @@ let y () = x()
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "y"
     response.Should().Be(expected)
@@ -98,13 +101,13 @@ let y () = x() + 10
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "y"
     response.Should().Be(expected)
 
 [<Fact>]
-let ``Can generated module symbols`` () =
+let ``Can generate module symbols`` () =
     let input =
         $"""module Test
 
@@ -112,18 +115,22 @@ let x () = 1
 """
 
     let declarations = getDeclarations checker input
-    let funcSymbols = buildModuleSymbolList declarations |> getSymbols
 
-    % funcSymbols.Should().HaveLength(1)
-    % (funcSymbols.ContainsKey "x").Should().BeTrue()
+    let moduleSymbols =
+        buildModuleSymbolList declarations
+        |> getModuleSymbols
 
-    let (xDict, xIndex) = funcSymbols["x"]
+    % moduleSymbols.Should().HaveLength(1)
+    % (moduleSymbols.ContainsKey "x").Should().BeTrue()
 
-    % xDict.Count.Should().Be(1)
+    let (xDict, xIndex) = moduleSymbols["x"]
+
+    let paramDict = xDict.paramSymbols
+    % paramDict.Count.Should().Be(1)
     % xIndex.Should().Be(0)
 
-    % (xDict.ContainsKey "unitVar0").Should().BeTrue()
-    let symbolEntry = xDict["unitVar0"]
+    % (paramDict.ContainsKey "unitVar0").Should().BeTrue()
+    let symbolEntry = paramDict["unitVar0"]
     % symbolEntry.isUnit.Should().BeTrue()
     % symbolEntry.name.Should().Be("x")
 
@@ -142,7 +149,7 @@ let x () = 2342
     response.Should().Be(2342)
 
 [<Fact>]
-let ``Can handle local params`` () =
+let ``Can generate local params symbols`` () =
     let input =
         $"""module Test
 
@@ -153,7 +160,74 @@ let x () =
 """
 
     let declarations = getDeclarations checker input
+
+    let moduleSymbols =
+        buildModuleSymbolList declarations
+        |> getModuleSymbols
+
+    % moduleSymbols.Should().HaveLength(1)
+    % (moduleSymbols.ContainsKey "x").Should().BeTrue()
+
+    let (xDict, xIndex) = moduleSymbols["x"]
+
+    let paramDict = xDict.paramSymbols
+    let localDict = xDict.localSymbols
+    % paramDict.Count.Should().Be(1)
+    % localDict.Count.Should().Be(2)
+    % xIndex.Should().Be(0)
+
+    % (paramDict.ContainsKey "unitVar0").Should().BeTrue()
+    let xSymbol = paramDict["unitVar0"]
+    % xSymbol.isUnit.Should().BeTrue()
+    % xSymbol.name.Should().Be("x")
+
+    % (localDict.ContainsKey "y").Should().BeTrue()
+    let ySymbol = localDict["y"]
+    % ySymbol.isUnit.Should().BeFalse()
+    % ySymbol.typ.Should().Be(Types.Int32)
+    % ySymbol.name.Should().Be("y")
+    % ySymbol.index.Should().Be(0)
+
+    % (localDict.ContainsKey "z").Should().BeTrue()
+    let zSymbol = localDict["z"]
+    % zSymbol.isUnit.Should().BeFalse()
+    % zSymbol.typ.Should().Be(Types.Int32)
+    % zSymbol.name.Should().Be("z")
+    % zSymbol.index.Should().Be(1)
+
+[<Fact>]
+let ``Can handle single local param`` () =
+    let input =
+        $"""module Test
+
+let x () =
+    let y = 20
+    y
+"""
+
+    let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
+    printWasm wasmBytes
+
     let response = wasmBytes |> runFuncInt32Return "x"
-    response.Should().Be(43)
+    response.Should().Be(20)
+
+[<Fact>]
+let ``Can handle local params`` () =
+    let input =
+        $"""module Test
+
+let x () =
+    let y = 20
+    let z = 23
+    y + z - 3
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "x"
+    response.Should().Be(40)

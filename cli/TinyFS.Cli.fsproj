@@ -13,4 +13,8 @@
     <ProjectReference Include="..\shared\TinyFS.Shared.fsproj" />
     <ProjectReference Include="..\src\TinyFS.Core.fsproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="9.0.201" />
+  </ItemGroup>
 </Project>

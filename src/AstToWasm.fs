@@ -4,8 +4,6 @@ open FSharp.Compiler.Symbols
 open System
 open TinyFS.Core.FSharpTypes
 
-//open Fable.AST
-//open Fable.AST.Fable
 open System.Collections.Generic
 open Utils
 
@@ -99,18 +97,23 @@ type SymbolEntry =
       isUnit: bool
       symbolType: SymbolType }
 
-///Holds references to local params
-type LocalSymbolDict = Dictionary<string, SymbolEntry>
+type SymbolDict = Dictionary<string, SymbolEntry>
 
-///This is designed to hold references to all functions and
-///those functions local params
-///The int in the value tuple references which number function
+///Holds references to local params
+type FunctionSymbolDict =
+    { paramSymbols: Dictionary<string, SymbolEntry>
+      localSymbols: Dictionary<string, SymbolEntry> }
+//type LocalSymbolDict = Dictionary<string, SymbolEntry>
+
+///This is designed to hold references to all functions inside
+///a module and those functions local params
+///The int in the value tuple references which numbered function
 ///this is in the module because Wasm tracks function by index
-type FunctionSymbolDict = Dictionary<string, LocalSymbolDict * int>
+type ModuleSymbolDict = Dictionary<string, FunctionSymbolDict * int>
 
 type SymbolEntries =
+    | Module of ModuleSymbolDict
     | Function of FunctionSymbolDict
-    | Locals of LocalSymbolDict
 
 ///Tracks all modules symbols, whether top level functions
 ///or local parameters
@@ -304,20 +307,21 @@ let operatorToWasm (op: string) (typ: Types) =
     //extra
     | _ -> INSTR_END
 
-let resolveSymbols (localSymbols: LocalSymbolDict) (name: string) =
-    let containsKey = localSymbols.ContainsKey name
+let resolveLocalSymbols (functionSymbols: FunctionSymbolDict) (name: string) =
+    let containsKey = functionSymbols.localSymbols.ContainsKey name
 
     match containsKey with
     | true ->
-        let symbol = localSymbols[name]
-        Ok symbol
-    | false -> Error $"Error: undeclared identifier: {name}"
+        let symbol = functionSymbols.localSymbols[name]
+        symbol
+    | false -> failwith $"TinyFS: undeclared identifier: {name}"
 
 let buildDeclError decl =
     (sprintf "TinyFS: '%s' is currently an unsupported declaration type" (decl.GetType().ToString()))
 
 let buildExprError (expr: FSharpExpr) =
-    (sprintf "TinyFS: '%s' is currently an unsupported expression type" (expr.GetType().ToString()))
+    let exprType = determineExprPattern expr
+    (sprintf "TinyFS: '%s+%s' is currently an unsupported expression type" (expr.GetType().ToString()) exprType)
 
 let private isOperator (memb: FSharpMemberOrFunctionOrValue) =
     match memb.DeclaringEntity with
@@ -329,8 +333,8 @@ let private isOperator (memb: FSharpMemberOrFunctionOrValue) =
 
 let rec exprToWasm
     (expr: FSharpExpr)
+    (moduleSymbols: ModuleSymbolDict)
     (functionSymbols: FunctionSymbolDict)
-    (localSymbols: LocalSymbolDict)
     : byte list =
     match expr with
     | FSharpExprPatterns.Call (expr, memb, ownerGenArgs, memberGenArgs, args) ->
@@ -340,8 +344,8 @@ let rec exprToWasm
             | 2 ->
                 let opWasm = operatorToWasm opName Types.Int32 |> toList
 
-                let leftWasm = exprToWasm args[0] functionSymbols localSymbols
-                let rightWasm = exprToWasm args[1] functionSymbols localSymbols
+                let leftWasm = exprToWasm args[0] moduleSymbols functionSymbols
+                let rightWasm = exprToWasm args[1] moduleSymbols functionSymbols
                 aList3 leftWasm rightWasm opWasm
             | _ ->
                 failwith (
@@ -349,8 +353,8 @@ let rec exprToWasm
                 )
         | _ ->
             let index =
-                if functionSymbols.ContainsKey memb.CompiledName then
-                    let (_, idx) = functionSymbols[memb.CompiledName]
+                if moduleSymbols.ContainsKey memb.CompiledName then
+                    let (_, idx) = moduleSymbols[memb.CompiledName]
                     idx
                 else
                     failwith (sprintf "TinyFS: Cannot find function '%s' in FunctionSymbols table" memb.CompiledName)
@@ -360,7 +364,7 @@ let rec exprToWasm
                 |> List.filter (fun arg ->
                     (getType arg.Type.BasicQualifiedName)
                     <> Types.Unit)
-                |> List.map (fun arg -> exprToWasm arg functionSymbols localSymbols)
+                |> List.map (fun arg -> exprToWasm arg moduleSymbols functionSymbols)
                 |> List.collect id
 
             let callWasm = appendSinList INSTR_CALL (i32 index)
@@ -377,6 +381,20 @@ let rec exprToWasm
             | Some vall -> appendSinList i32_CONST (i32 vall)
             | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to Int32" (value.ToString()))
         | _ -> failwith (sprintf "TinyFS: Cannot extract value from %s type" (typ.ToString()))
+    | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
+        let leftWasm = exprToWasm letExpr moduleSymbols functionSymbols
+        let rightWasm = exprToWasm rightExpr moduleSymbols functionSymbols
+
+        //let innerWasm = aList2 leftWasm rightWasm
+        let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
+
+        let localWasm = appendSinList INSTR_LOCAL_SET (i32 localSymbol.index)
+
+        aList3 leftWasm localWasm rightWasm
+    | FSharpExprPatterns.Value (vall) ->
+        let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
+
+        appendSinList INSTR_LOCAL_GET (i32 localSymbol.index)
     //| Const
     //| Operation (kind, _, typ, _) ->
     //    match kind, typ with
@@ -444,7 +462,7 @@ let rec exprToWasm
     //    | Error msg -> failwith (sprintf "TinyFS: %s" msg)
     | _ -> failwith (buildExprError expr)
 
-let rec defineFunctionDecls decls (functionSymbols: FunctionSymbolDict) : WasmFuncBytes list =
+let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBytes list =
     let mutable functionDecls: WasmFuncBytes list = []
 
     for decl in decls do
@@ -456,33 +474,28 @@ let rec defineFunctionDecls decls (functionSymbols: FunctionSymbolDict) : WasmFu
                 //does it matter??
                 let name = vall.CompiledName
 
-                let (symbolsOfFunction, localVars) =
-                    if functionSymbols.ContainsKey name then
-                        let (currentSymbols, _) = functionSymbols[name]
-                        let mutable symbolValues: SymbolEntry list = []
+                let (functionSymbols, idx) =
 
-                        for sym in currentSymbols.Values do
-                            if sym.isUnit then
-                                symbolValues <- symbolValues
-                            else
-                                symbolValues <- appendListSin symbolValues sym
-
-                        (currentSymbols, symbolValues)
+                    if moduleSymbols.ContainsKey name then
+                        moduleSymbols[name]
                     else
-                        (new LocalSymbolDict(), [])
+                        failwith (sprintf "TinyFS: Cannot find symbolDict for %s" name)
 
-                let paramVals =
-                    localVars
-                    |> List.filter (fun se -> se.symbolType = SymbolType.Param)
-
-                let paramTypes = paramVals |> List.map (fun _ -> i32_VAL_TYPE)
+                let paramTypes =
+                    functionSymbols.paramSymbols
+                    |> Seq.map (fun keyVP -> keyVP.Value)
+                    |> Seq.filter (fun sym -> not sym.isUnit)
+                    |> Seq.sortBy (fun sym -> sym.index)
+                    |> Seq.map (fun _ -> i32_VAL_TYPE)
+                    |> Seq.toList
 
                 let varsCount =
-                    localVars
-                    |> List.filter (fun se -> se.symbolType = SymbolType.Local)
-                    |> List.length
+                    functionSymbols.localSymbols
+                    |> Seq.map (fun keyVP -> keyVP.Value)
+                    |> Seq.sortBy (fun sym -> sym.index)
+                    |> Seq.length
 
-                let bodyWasm = exprToWasm body functionSymbols symbolsOfFunction
+                let bodyWasm = exprToWasm body moduleSymbols functionSymbols
 
                 let functionDecls: WasmFuncBytes list =
                     [ { name = name
@@ -494,28 +507,52 @@ let rec defineFunctionDecls decls (functionSymbols: FunctionSymbolDict) : WasmFu
                 functionDecls
             | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->
                 failwith "TinyFS: Currently do not support module level members"
-            | FSharpDeclaration.Entity (_, decls) -> defineFunctionDecls decls functionSymbols
+            | FSharpDeclaration.Entity (_, decls) -> defineFunctionDecls decls moduleSymbols
             | _ -> failwith (buildDeclError decl)
 
         functionDecls <- appendList functionDecls funcs
 
     functionDecls
 
+let rec exprToSymbolList (functionSymbols: FunctionSymbolDict) expr =
+    match expr with
+    | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
+        let name = vall.CompiledName
+
+        let typ = getType vall.FullType.BasicQualifiedName
+
+        let symbolEntry =
+            { name = name
+              index = functionSymbols.localSymbols.Count
+              isUnit = typ = Types.Unit
+              typ = typ
+              symbolType = SymbolType.Local }
+
+        functionSymbols.localSymbols.Add(name, symbolEntry)
+
+        exprToSymbolList functionSymbols letExpr
+        exprToSymbolList functionSymbols rightExpr
+
+    | _ -> ()
+
 let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
     for decl in decls do
         match decl with
         | FSharpDeclaration.MemberOrFunctionOrValue (vall, curriedArgs, body) when vall.IsFunction ->
             let name = vall.CompiledName
-            let locals = new LocalSymbolDict()
+
+            let functionSymbols =
+                { localSymbols = new SymbolDict()
+                  paramSymbols = new SymbolDict() }
+
             let last = moduleSymbolList.Last.Value
 
-            let exprType = determineExprPattern body
-
             match last with
-            | Function (funcs) -> funcs.Add(name, (locals, funcs.Count))
-            | Locals _ -> failwith "TinyFS: Should have been Funcion in ConvertingSymbolMap"
+            | Module (mods) -> mods.Add(name, (functionSymbols, mods.Count))
+            | Function _ -> failwith "TinyFS: Should have been Funcion in ConvertingSymbolMap"
 
-            moduleSymbolList.AddLast(Locals locals) |> ignore
+            moduleSymbolList.AddLast(Function functionSymbols)
+            |> ignore
 
             for args in curriedArgs do
                 for arg in args do
@@ -524,16 +561,14 @@ let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
 
                     let symbolEntry =
                         { name = name
-                          index = locals.Count
-                          //typ = param.Type
+                          index = functionSymbols.paramSymbols.Count
                           isUnit = typ = Types.Unit
                           typ = typ
                           symbolType = SymbolType.Param }
 
-                    locals.Add(paramName, symbolEntry)
-            //TODO - need to do this to handle local parameters inside of functions
-            //Also need to figure out how to supported nested let functions
-            //convertToModuleSymbolList moduleSymbolList body.
+                    functionSymbols.paramSymbols.Add(paramName, symbolEntry)
+
+            exprToSymbolList functionSymbols body
 
             moduleSymbolList.RemoveLast()
         | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->
@@ -545,7 +580,7 @@ let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
 
 let buildModuleSymbolList (decls: FSharpImplementationFileDeclaration list) =
     let moduleSymbolList = new ModuleSymbolList()
-    let functions = Function(FunctionSymbolDict())
+    let functions = Module(ModuleSymbolDict())
     moduleSymbolList.AddLast functions |> ignore
 
     convertToModuleSymbolList moduleSymbolList decls
@@ -583,12 +618,10 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
 
     bytes
 
-////Overall compile function
-
 let private getFunctionSymbols (moduleSymbolList: ModuleSymbolList) =
     match moduleSymbolList.First.Value with
-    | Function fnSymbols -> fnSymbols
-    | Locals _ -> failwith "TinyFS: Should not be locals in AstToWasm.getFunctionSymbols"
+    | Module fnSymbols -> fnSymbols
+    | Function _ -> failwith "TinyFS: Should not be locals in AstToWasm.getFunctionSymbols"
 
 let astToWasm (decls: FSharpImplementationFileDeclaration list) =
     buildModuleSymbolList decls

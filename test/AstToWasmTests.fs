@@ -23,30 +23,32 @@ let getSymbols (moduleSymbols: ModuleSymbolList) =
     | Function functions -> functions
     | Locals _ -> failwith "TinyFS: Should not be locals in compile"
 
-//[<Theory>]
-//[<InlineData("1", 1)>]
-//[<InlineData("1 + 3", 4)>]
-//[<InlineData("1 - 3", -2)>]
-//[<InlineData("10 / 2", 5)>]
-//[<InlineData("11 / 2", 5)>]
-//[<InlineData("14 / 5", 2)>]
-//[<InlineData("10 * 15", 150)>]
-//[<InlineData("10 * 15 + 10", 160)>]
-//[<InlineData("10 * (15 + 10)", 250)>]
-//let ``Can compile and run simple wasm program`` expr expected =
-//    let input =
-//        $"""
-//module Test
+[<Theory>]
+[<InlineData("1", 1)>]
+[<InlineData("1 + 3", 4)>]
+[<InlineData("1 + 3 + 2", 6)>]
+[<InlineData("1 - 3", -2)>]
+[<InlineData("10 / 2", 5)>]
+[<InlineData("11 / 2", 5)>]
+[<InlineData("14 / 5", 2)>]
+[<InlineData("11 % 2", 1)>]
+[<InlineData("14 % 5", 4)>]
+[<InlineData("10 * 15", 150)>]
+[<InlineData("10 * 15 + 10", 160)>]
+[<InlineData("10 * (15 + 10)", 250)>]
+let ``Can compile and run simple wasm program`` expr expected =
+    let input =
+        $"""
+module Test
 
-//let x () = {expr}
-//"""
+let x () = {expr}
+"""
 
-//    let wasmBytes = getDeclarations checker input |> compile
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
 
-//    printWasm wasmBytes
-
-//    let response = wasmBytes |> runFuncInt32Return "x"
-//    response.Should().Be(expected)
+    let response = wasmBytes |> runFuncInt32Return "x"
+    response.Should().Be(expected)
 
 //[<Theory>]
 //[<InlineData("1", 1)>]
@@ -178,39 +180,38 @@ let getSymbols (moduleSymbols: ModuleSymbolList) =
 
 [<Fact>]
 let ``Can generated module symbols`` () =
-    let input = $"""module Test
+    let input =
+        $"""module Test
 
 let x () = 1
 """
-    
+
     let declarations = getDeclarations checker input
-    let funcSymbols = 
-        buildModuleSymbolList declarations
-        |> getSymbols
+    let funcSymbols = buildModuleSymbolList declarations |> getSymbols
 
     % funcSymbols.Should().HaveLength(1)
     % (funcSymbols.ContainsKey "x").Should().BeTrue()
-    
+
     let (xDict, xIndex) = funcSymbols["x"]
 
     % xDict.Count.Should().Be(1)
     % xIndex.Should().Be(0)
 
-    %(xDict.ContainsKey "unitVar0").Should().BeTrue()
+    % (xDict.ContainsKey "unitVar0").Should().BeTrue()
     let symbolEntry = xDict["unitVar0"]
-    %symbolEntry.isUnit.Should().BeTrue()
-    %symbolEntry.name.Should().Be("x")
+    % symbolEntry.isUnit.Should().BeTrue()
+    % symbolEntry.name.Should().Be("x")
 
 [<Fact>]
 let ``Can run simple function`` () =
-    let input = $"""module Test
+    let input =
+        $"""module Test
 
 let x () = 2342
 """
-    
+
     let declarations = getDeclarations checker input
-    let wasmBytes = 
-        astToWasm declarations
+    let wasmBytes = astToWasm declarations
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(2342)

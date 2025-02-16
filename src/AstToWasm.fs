@@ -79,6 +79,7 @@ let i64_VAL_TYPE = 0x7Euy
 let i32_VAL_TYPE = 0x7Fuy
 
 type FSharpDeclaration = FSharpImplementationFileDeclaration
+
 ///Contains the wasm byte representations of a F# function
 type WasmFuncBytes =
     { name: string
@@ -282,26 +283,26 @@ let getType (strType) =
     | _ -> failwith (sprintf "TinyFS: %s is an unknown type" strType)
 
 ///Start converting functions
-//let operatorToWasm (op: BinaryOperator) (typ: Types) =
-//    match op, typ with
-//    //arithmetic
-//    | BinaryPlus, Int32 -> INSTR_i32_ADD
-//    | BinaryMinus, Int32 -> INSTR_i32_SUB
-//    | BinaryMultiply, Int32 -> INSTR_i32_MUL
-//    | BinaryDivide, Int32 -> INSTR_i32_DIV_S
-//    //| "%" -> INSTR_i32_MOD_S
-//    //comparison
-//    //| "==" -> INSTR_i32_EQ
-//    //| "!=" -> INSTR_i32_NE
-//    //| "<" -> INSTR_i32_LT_S
-//    //| "<=" -> INSTR_i32_LE_S
-//    //| ">" -> INSTR_i32_GT_S
-//    //| ">=" -> INSTR_i32_GE_S
-//    ////logic
-//    //| "and" -> INSTR_i32_AND
-//    //| "or" -> INSTR_i32_OR
-//    //extra
-//    | _ -> INSTR_END
+let operatorToWasm (op: string) (typ: Types) =
+    match op, typ with
+    //arithmetic
+    | FS_OP_ADDITION, Int32 -> INSTR_i32_ADD
+    | FS_OP_SUBTRACTION, Int32 -> INSTR_i32_SUB
+    | FS_OP_MULTIPLY, Int32 -> INSTR_i32_MUL
+    | FS_OP_DIVISION, Int32 -> INSTR_i32_DIV_S
+    | FS_OP_MODULUS, Int32 -> INSTR_i32_MOD_S
+    //comparison
+    //| "==" -> INSTR_i32_EQ
+    //| "!=" -> INSTR_i32_NE
+    //| "<" -> INSTR_i32_LT_S
+    //| "<=" -> INSTR_i32_LE_S
+    //| ">" -> INSTR_i32_GT_S
+    //| ">=" -> INSTR_i32_GE_S
+    ////logic
+    //| "and" -> INSTR_i32_AND
+    //| "or" -> INSTR_i32_OR
+    //extra
+    | _ -> INSTR_END
 
 let resolveSymbols (localSymbols: LocalSymbolDict) (name: string) =
     let containsKey = localSymbols.ContainsKey name
@@ -314,21 +315,44 @@ let resolveSymbols (localSymbols: LocalSymbolDict) (name: string) =
 
 let buildDeclError decl =
     (sprintf "TinyFS: '%s' is currently an unsupported declaration type" (decl.GetType().ToString()))
+
 let buildExprError (expr: FSharpExpr) =
     (sprintf "TinyFS: '%s' is currently an unsupported expression type" (expr.GetType().ToString()))
 
-let rec exprToWasm (expr: FSharpExpr) (functionSymbols: FunctionSymbolDict) (localSymbols: LocalSymbolDict) : byte list =
+let rec exprToWasm
+    (expr: FSharpExpr)
+    (functionSymbols: FunctionSymbolDict)
+    (localSymbols: LocalSymbolDict)
+    : byte list =
     match expr with
-    | FSharpExprPatterns.Const(value, typ) ->
+    | FSharpExprPatterns.Call (expr, memb, ownerGenArgs, memberGenArgs, args) ->
+        match memb.DeclaringEntity with
+        | Some de ->
+            match de.BasicQualifiedName, args.Length with
+            | FS_OPERATOR, 2 ->
+                let opWasm =
+                    operatorToWasm memb.CompiledName Types.Int32
+                    |> toList
+
+                let leftWasm = exprToWasm args[0] functionSymbols localSymbols
+                let rightWasm = exprToWasm args[1] functionSymbols localSymbols
+                aList3 leftWasm rightWasm opWasm
+            | FS_OPERATOR, _ ->
+                failwith (
+                    sprintf "TinyFS: Was not expecetd %d arguments with %s operator" args.Length memb.CompiledName
+                )
+            | _ -> failwith (sprintf "TinyFS: cannot handle callExpress with type %s" de.BasicQualifiedName)
+        | None -> failwith "TnyFS: Cannot handle call with empty DeclaringEntity"
+    | FSharpExprPatterns.Const (value, typ) ->
         let typ = getType typ.BasicQualifiedName
+
         match typ with
-        | Types.Int32 -> 
+        | Types.Int32 ->
             match convertInt value with
-            | Some vall ->
-                appendSinList i32_CONST (i32 vall)
+            | Some vall -> appendSinList i32_CONST (i32 vall)
             | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to Int32" (value.ToString()))
         | _ -> failwith (sprintf "TinyFS: Cannot extract value from %s type" (typ.ToString()))
-    //| Const 
+    //| Const
     //| Operation (kind, _, typ, _) ->
     //    match kind, typ with
     //    | Binary (operator, left, right), Number (numKind, _) ->
@@ -401,7 +425,7 @@ let rec defineFunctionDecls decls (functionSymbols: FunctionSymbolDict) : WasmFu
     for decl in decls do
         let funcs =
             match decl with
-            | FSharpDeclaration.MemberOrFunctionOrValue(vall, curriedArgs, body) when vall.IsFunction ->
+            | FSharpDeclaration.MemberOrFunctionOrValue (vall, curriedArgs, body) when vall.IsFunction ->
                 //need logic for handling module let bindings that have no parameters
                 //if that a zero parameter function? Or is that a module wide variable??
                 //does it matter??
@@ -443,21 +467,19 @@ let rec defineFunctionDecls decls (functionSymbols: FunctionSymbolDict) : WasmFu
                         body = appendListSin bodyWasm INSTR_END } ]
 
                 functionDecls
-            | FSharpDeclaration.MemberOrFunctionOrValue(_, _, _) ->
+            | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->
                 failwith "TinyFS: Currently do not support module level members"
-            | FSharpDeclaration.Entity(_, decls) ->
-                defineFunctionDecls decls functionSymbols
+            | FSharpDeclaration.Entity (_, decls) -> defineFunctionDecls decls functionSymbols
             | _ -> failwith (buildDeclError decl)
 
         functionDecls <- appendList functionDecls funcs
 
     functionDecls
-let rec convertToModuleSymbolList 
-    (moduleSymbolList: ModuleSymbolList) 
-    decls =
+
+let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
     for decl in decls do
         match decl with
-        | FSharpDeclaration.MemberOrFunctionOrValue(vall, curriedArgs, body) when vall.IsFunction ->
+        | FSharpDeclaration.MemberOrFunctionOrValue (vall, curriedArgs, body) when vall.IsFunction ->
             let name = vall.CompiledName
             let locals = new LocalSymbolDict()
             let last = moduleSymbolList.Last.Value
@@ -474,12 +496,12 @@ let rec convertToModuleSymbolList
                     let typ = getType arg.FullType.BasicQualifiedName
 
                     let symbolEntry =
-                            { name = name
-                              index = locals.Count
-                              //typ = param.Type
-                              isUnit = typ = Types.Unit
-                              typ = typ
-                              symbolType = SymbolType.Param }
+                        { name = name
+                          index = locals.Count
+                          //typ = param.Type
+                          isUnit = typ = Types.Unit
+                          typ = typ
+                          symbolType = SymbolType.Param }
 
                     locals.Add(paramName, symbolEntry)
             //TODO - need to do this to handle local parameters inside of functions
@@ -487,10 +509,9 @@ let rec convertToModuleSymbolList
             //buildSymbolTAble memDecl.body scopes
 
             moduleSymbolList.RemoveLast()
-        | FSharpDeclaration.MemberOrFunctionOrValue(_, _, _) ->
+        | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->
             failwith "TinyFS: Currently do not support module level members"
-        | FSharpDeclaration.Entity(_, decls) ->
-            convertToModuleSymbolList moduleSymbolList decls
+        | FSharpDeclaration.Entity (_, decls) -> convertToModuleSymbolList moduleSymbolList decls
         | _ -> failwith "TinyFS: Unsupported declaration type for symbolmap"
 
     ()
@@ -537,11 +558,11 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
 
 ////Overall compile function
 
-let private getFunctionSymbols (moduleSymbolList: ModuleSymbolList) =        
+let private getFunctionSymbols (moduleSymbolList: ModuleSymbolList) =
     match moduleSymbolList.First.Value with
     | Function fnSymbols -> fnSymbols
     | Locals _ -> failwith "TinyFS: Should not be locals in AstToWasm.getFunctionSymbols"
-    
+
 let astToWasm (decls: FSharpImplementationFileDeclaration list) =
     buildModuleSymbolList decls
     |> getFunctionSymbols

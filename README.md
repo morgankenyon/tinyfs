@@ -12,7 +12,7 @@ Everything is currently run through unit tests, there's no CLI to compile a file
 
 ## How Is This Working
 
-Using [Fable](https://github.com/fable-compiler/Fable) to generate a usable Abstract Syntax Tree (AST) given F# code.
+I'm using the [FSharp.Compiler.Service](https://www.nuget.org/packages/FSharp.Compiler.Service) nuget package to generate a usable Abstract Syntax Tree (AST) given F# code.
 
-Then using what I learned in [WebAssembly from the Ground Up](https://wasmgroundup.com/) for converting the Fable AST to Wasm.
+Then using what I learned in [WebAssembly from the Ground Up](https://wasmgroundup.com/) for converting the F# AST to Wasm.
 

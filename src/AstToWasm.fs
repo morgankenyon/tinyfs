@@ -509,6 +509,8 @@ let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
             let locals = new LocalSymbolDict()
             let last = moduleSymbolList.Last.Value
 
+            let exprType = determineExprPattern body
+
             match last with
             | Function (funcs) -> funcs.Add(name, (locals, funcs.Count))
             | Locals _ -> failwith "TinyFS: Should have been Funcion in ConvertingSymbolMap"
@@ -531,7 +533,7 @@ let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
                     locals.Add(paramName, symbolEntry)
             //TODO - need to do this to handle local parameters inside of functions
             //Also need to figure out how to supported nested let functions
-            //buildSymbolTAble memDecl.body scopes
+            //convertToModuleSymbolList moduleSymbolList body.
 
             moduleSymbolList.RemoveLast()
         | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->

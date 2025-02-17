@@ -20,6 +20,9 @@ let SECTION_ID_EXPORT = 0x7uy
 let SECTION_ID_CODE = 0xAuy
 
 [<Literal>]
+let INSTR_DROP = 0x1Auy
+
+[<Literal>]
 let INSTR_IF = 0x4uy
 
 [<Literal>]
@@ -483,6 +486,18 @@ let rec exprToWasm
             aList6 guardWasm ifCommandWasm thenWasm elseCommandWasm elseWasm endingWasm
 
         wasmBytes
+    | FSharpExprPatterns.Sequential (first, second) ->
+        let firstWasm = exprToWasm first moduleSymbols functionSymbols
+        let secondWasm = exprToWasm second moduleSymbols functionSymbols
+        aList2 firstWasm secondWasm
+    | FSharpExprPatterns.ValueSet (valToSet, valueExpr) ->
+        let symbol = resolveLocalSymbols functionSymbols valToSet.CompiledName
+
+        let exprWasm = exprToWasm valueExpr moduleSymbols functionSymbols
+
+        let setWasm = aList3 [ INSTR_LOCAL_TEE ] (i32 symbol.index) [ INSTR_DROP ]
+
+        aList2 exprWasm setWasm
     //| Const
     //| Operation (kind, _, typ, _) ->
     //    match kind, typ with

@@ -19,8 +19,14 @@ let SECTION_ID_EXPORT = 0x7uy
 [<Literal>]
 let SECTION_ID_CODE = 0xAuy
 
+
 [<Literal>]
-let INSTR_DROP = 0x1Auy
+let INSTR_BLOCK = 0x2uy
+
+[<Literal>]
+let INSTR_LOOP = 0x3uy
+
+
 
 [<Literal>]
 let INSTR_IF = 0x4uy
@@ -30,9 +36,16 @@ let INSTR_ELSE = 0x5uy
 
 [<Literal>]
 let INSTR_END = 0xBuy
+[<Literal>]
+let INSTR_BR = 0xCuy
+
+[<Literal>]
+let INSTR_BR_IF = 0xDuy
 
 [<Literal>]
 let INSTR_CALL = 0x10uy
+[<Literal>]
+let INSTR_DROP = 0x1Auy
 
 [<Literal>]
 let INSTR_LOCAL_GET = 0x20uy
@@ -387,13 +400,25 @@ let resolveLocalSymbols (functionSymbols: FunctionSymbolDict) (name: string) =
     let isLocal = functionSymbols.localSymbols.ContainsKey name
 
     match isLocal with
-    | true -> functionSymbols.localSymbols[name]
+    | true -> 
+        functionSymbols.localSymbols[name]
     | false ->
         let isParam = functionSymbols.paramSymbols.ContainsKey name
 
         match isParam with
         | true -> functionSymbols.paramSymbols[name]
         | false -> failwith $"TinyFS: undeclared identifier: {name}"
+
+///Rethink this approach
+let getLocalIndex (functionSymbols: FunctionSymbolDict) (sym: SymbolEntry) =
+    match sym.symbolType with
+    | SymbolType.Param -> sym.index
+    | SymbolType.Local ->
+        let nonUnitParamCount =
+            functionSymbols.paramSymbols
+            |> Seq.filter (fun keyVP -> not keyVP.Value.isUnit)
+            |> Seq.length
+        nonUnitParamCount + sym.index
 
 let buildDeclError decl =
     (sprintf "TinyFS: '%s' is currently an unsupported declaration type" (decl.GetType().ToString()))
@@ -464,10 +489,11 @@ let rec exprToWasm
         let leftWasm = exprToWasm letExpr moduleSymbols functionSymbols
         let rightWasm = exprToWasm rightExpr moduleSymbols functionSymbols
 
-        //let innerWasm = aList2 leftWasm rightWasm
-        let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
+        let localIndex =
+            resolveLocalSymbols functionSymbols vall.CompiledName
+            |> getLocalIndex functionSymbols
 
-        let localWasm = appendSinList INSTR_LOCAL_SET (i32 localSymbol.index)
+        let localWasm = appendSinList INSTR_LOCAL_SET (i32 localIndex)
 
         aList3 leftWasm localWasm rightWasm
     | FSharpExprPatterns.Value (vall) ->
@@ -498,71 +524,15 @@ let rec exprToWasm
         let setWasm = aList3 [ INSTR_LOCAL_TEE ] (i32 symbol.index) [ INSTR_DROP ]
 
         aList2 exprWasm setWasm
-    //| Const
-    //| Operation (kind, _, typ, _) ->
-    //    match kind, typ with
-    //    | Binary (operator, left, right), Number (numKind, _) ->
-    //        let operatorWasm = operatorToWasm operator numKind |> toList
-    //        let leftWasm = exprToWasm left functionSymbols localSymbols
-    //        let rightWasm = exprToWasm right functionSymbols localSymbols
+    | FSharpExprPatterns.WhileLoop (guardExpr, bodyExpr, _) ->
+        let loopWasm = [ INSTR_LOOP; (getBlockType Empty_) ]
+        let guardWasm = exprToWasm guardExpr moduleSymbols functionSymbols
+        let ifWasm = [ INSTR_IF; (getBlockType Empty_) ]
+        let bodyWasm = exprToWasm bodyExpr moduleSymbols functionSymbols
+        let brWasm = aList3 [ INSTR_BR ] (i32 1) [ INSTR_END; INSTR_END ] 
 
-    //        aList3 leftWasm rightWasm operatorWasm
-    //    | Unary (_, operand), Number (_, _) ->
-    //        //In F#, integer division needs to return an INT
-    //        //So division is wrapped in an Unary expression
-    //        //to return an INT versus a float
-    //        //But I don't think we need that in Wasm
-    //        exprToWasm operand functionSymbols localSymbols
-    //    | Unary (_, operand), Any ->
-    //        //Also used for F# integer division referenced above
-    //        exprToWasm operand functionSymbols localSymbols
-    //    | _ -> failwith "TinyFS: Unsupported Operation type"
-    //| Value (kind, _) ->
-    //    match kind with
-    //    | NumberConstant (value, _) ->
-    //        match value with
-    //        | NumberValue.Int32 num -> appendSinList i32_CONST (i32 num)
-    //        | _ -> failwith "TinyFS: Not supporting int64s right now"
-    //    | _ -> failwith "TinyFS: Unsupported value type"
-    //| Extended (extendedSet, _) ->
-    //    match extendedSet with
-    //    | Throw (exExprOpt, typ) ->
-    //        match exExprOpt with
-    //        | Some exExpr -> exprToWasm exExpr functionSymbols localSymbols
-    //        | None -> failwith "TinyFS: Cannot parse this Extended expression type"
-    //    | _ -> failwith (buildExprError expr)
-    //| Call (_, info, _, _) ->
-    //    match info.MemberRef with
-    //    | Some memRef ->
-    //        let memberName = getMemberName memRef
-
-    //        let index =
-    //            if functionSymbols.ContainsKey memberName then
-    //                let (_, idx) = functionSymbols[memberName]
-    //                idx
-    //            else
-    //                failwith "TinyFS: Cannot find function name in FunctionSymbols table"
-
-    //        let argumentBytes =
-    //            info.Args
-    //            |> List.filter (fun arg -> arg.Type <> Type.Unit)
-    //            |> List.map (fun arg -> exprToWasm arg functionSymbols localSymbols)
-    //            |> List.collect id
-
-    //        let callWasm = appendSinList INSTR_CALL (i32 index)
-
-    //        let wasmBytes = aList2 argumentBytes callWasm
-
-    //        wasmBytes
-    //    | None -> failwith "TinyFS: Cannot handle CallInfo with no MemberRef"
-    //| IdentExpr (ident) ->
-    //    let symbol = resolveSymbols localSymbols ident.Name
-
-    //    match symbol with
-    //    | Ok sy ->
-    //        let identWasm = appendSinList INSTR_LOCAL_GET (i32 sy.index)
-    //        identWasm
-    //    | Error msg -> failwith (sprintf "TinyFS: %s" msg)
+        let wasmBytes = aList5 loopWasm guardWasm ifWasm bodyWasm brWasm
+        wasmBytes
     | _ -> failwith (buildExprError expr)
 
 let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBytes list =

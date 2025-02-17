@@ -322,3 +322,44 @@ let x (y) =
 
     let response = wasmBytes |> runInt32FuncInt32 "x" 3
     response.Should().Be(6)
+
+[<Fact>]
+let ``Can support while loop`` () =
+    let input =
+        $"""module Test
+
+let countTo (n) =
+    let mutable x = 0
+    while x < n do
+        x <- x + 1
+    x
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
+    response.Should().Be(50)
+
+[<Fact>]
+let ``Can support let parameters in a while loop`` () =
+    let input =
+        $"""module Test
+
+let countTo (n) =
+    let mutable x = 0
+    while x < n do
+        let y = x
+        x <- x + y + 1
+    x
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
+    response.Should().Be(50)

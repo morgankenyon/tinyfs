@@ -48,7 +48,7 @@ let x () = {expr}
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(expected)
@@ -197,7 +197,7 @@ let x () =
     % zSymbol.index.Should().Be(1)
 
 [<Fact>]
-let ``Can handle single local param`` () =
+let ``Can support single local param`` () =
     let input =
         $"""module Test
 
@@ -209,13 +209,13 @@ let x () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(20)
 
 [<Fact>]
-let ``Can handle local params`` () =
+let ``Can support local params`` () =
     let input =
         $"""module Test
 
@@ -228,13 +228,13 @@ let x () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(40)
 
 [<Fact>]
-let ``Can handle parameter`` () =
+let ``Can support parameter`` () =
     let input =
         $"""module Test
 
@@ -245,7 +245,7 @@ let x (y) =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runInt32FuncInt32 "x" 3
     response.Should().Be(6)
@@ -267,7 +267,7 @@ let x (y) =
 [<InlineData("y >= 3", 3, 10)>]
 [<InlineData("y >= 3", -3, -10)>]
 [<InlineData("y >= 3", 6, 10)>]
-let ``Can handle boolean operators expressions`` expr param expected =
+let ``Can support boolean operator expressions`` expr param expected =
     let input =
         $"""module Test
 
@@ -283,7 +283,7 @@ let x (y: int32) =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runInt32FuncInt32 "x" param
     response.Should().Be(expected)
@@ -318,7 +318,48 @@ let x (y) =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runInt32FuncInt32 "x" 3
     response.Should().Be(6)
+
+[<Fact>]
+let ``Can support while loop`` () =
+    let input =
+        $"""module Test
+
+let countTo (n) =
+    let mutable x = 0
+    while x < n do
+        x <- x + 1
+    x
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
+    response.Should().Be(50)
+
+[<Fact>]
+let ``Can support let parameters in a while loop`` () =
+    let input =
+        $"""module Test
+
+let countTo (n) =
+    let mutable x = 0
+    while x < n do
+        let y = x
+        x <- x + y + 1
+    x
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
+    response.Should().Be(63)

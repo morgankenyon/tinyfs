@@ -10,7 +10,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\shared\TinyFS.Shared.fsproj" />
     <ProjectReference Include="..\src\TinyFS.Core.fsproj" />
   </ItemGroup>
 

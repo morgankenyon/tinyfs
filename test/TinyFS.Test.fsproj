@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TestObjs.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="FSharpToAstTests.fs" />
     <Compile Include="AstToWasmTests.fs" />
@@ -24,7 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\shared\TinyFS.Shared.fsproj" />
     <ProjectReference Include="..\src\TinyFS.Core.fsproj" />
   </ItemGroup>
 

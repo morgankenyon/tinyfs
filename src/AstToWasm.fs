@@ -20,6 +20,12 @@ let SECTION_ID_EXPORT = 0x7uy
 let SECTION_ID_CODE = 0xAuy
 
 [<Literal>]
+let INSTR_IF = 0x4uy
+
+[<Literal>]
+let INSTR_ELSE = 0x5uy
+
+[<Literal>]
 let INSTR_END = 0xBuy
 
 [<Literal>]
@@ -35,6 +41,9 @@ let INSTR_LOCAL_SET = 0x21uy
 let INSTR_LOCAL_TEE = 0x22uy
 
 [<Literal>]
+let EMPTY = 0x40uy
+
+[<Literal>]
 let i32_CONST = 0x41uy
 
 [<Literal>]
@@ -45,6 +54,39 @@ let f32_CONST = 0x43uy
 
 [<Literal>]
 let f64_CONST = 0x44uy
+
+[<Literal>]
+let INSTR_i32_EQZ = 0x45uy
+
+[<Literal>]
+let INSTR_i32_EQ = 0x46uy
+
+[<Literal>]
+let INSTR_i32_NE = 0x47uy
+
+[<Literal>]
+let INSTR_i32_LT_S = 0x48uy
+
+[<Literal>]
+let INSTR_i32_LT_U = 0x49uy
+
+[<Literal>]
+let INSTR_i32_GT_S = 0x4Auy
+
+[<Literal>]
+let INSTR_i32_GT_U = 0x4Buy
+
+[<Literal>]
+let INSTR_i32_LE_S = 0x4Cuy
+
+[<Literal>]
+let INSTR_i32_LE_U = 0x4Duy
+
+[<Literal>]
+let INSTR_i32_GE_S = 0x4Euy
+
+[<Literal>]
+let INSTR_i32_GE_U = 0x4Fuy
 
 [<Literal>]
 let TYPE_FUNCTION = 0x60uy
@@ -75,6 +117,9 @@ let i64_VAL_TYPE = 0x7Euy
 
 [<Literal>]
 let i32_VAL_TYPE = 0x7Fuy
+
+
+
 
 type FSharpDeclaration = FSharpImplementationFileDeclaration
 
@@ -217,6 +262,12 @@ let appendListSin a s = a @ [ s ]
 let aList2 l1 l2 = l1 @ l2
 ///Append to List with 3 parameters
 let aList3 l1 l2 l3 = l1 @ l2 @ l3
+///Append to List with 4 parameters
+let aList4 l1 l2 l3 l4 = l1 @ l2 @ l3 @ l4
+///Append to List with 5 parameters
+let aList5 l1 l2 l3 l4 l5 = l1 @ l2 @ l3 @ l4 @ l5
+///Append to List with 6 parameters
+let aList6 l1 l2 l3 l4 l5 l6 = l1 @ l2 @ l3 @ l4 @ l5 @ l6
 
 let locals (n: int32) (b: byte) = (i32 n) @ [ b ]
 
@@ -279,8 +330,24 @@ let modd (sections: byte list list) =
 
     aList3 (magic ()) (version ()) flattenedSections
 
+type blockType =
+    | Empty_
+    | I32
+    | I64
+    | F32
+    | F64
+
+let getBlockType bType =
+    match bType with
+    | Empty_ -> EMPTY
+    | I32 -> i32_VAL_TYPE
+    | I64 -> i64_VAL_TYPE
+    | F32 -> f32_VAL_TYPE
+    | F64 -> f64_VAL_TYPE
+
 let getType (strType) =
     match strType with
+    | FS_INT
     | FS_INT32 -> Types.Int32
     | FS_UNIT -> Types.Unit
     | _ -> failwith (sprintf "TinyFS: %s is an unknown type" strType)
@@ -295,26 +362,35 @@ let operatorToWasm (op: string) (typ: Types) =
     | FS_OP_DIVISION, Int32 -> INSTR_i32_DIV_S
     | FS_OP_MODULUS, Int32 -> INSTR_i32_MOD_S
     //comparison
-    //| "==" -> INSTR_i32_EQ
-    //| "!=" -> INSTR_i32_NE
-    //| "<" -> INSTR_i32_LT_S
-    //| "<=" -> INSTR_i32_LE_S
-    //| ">" -> INSTR_i32_GT_S
-    //| ">=" -> INSTR_i32_GE_S
+    | FS_OP_EQUALITY, Int32 -> INSTR_i32_EQ
+    | FS_OP_INEQUALITY, Int32 -> INSTR_i32_NE
+    | FS_OP_LESSTHAN, Int32 -> INSTR_i32_LT_S
+    | FS_OP_LESSTHANOREQUAL, Int32 -> INSTR_i32_LE_S
+    | FS_OP_GREATERTHAN, Int32 -> INSTR_i32_GT_S
+    | FS_OP_GREATERTHANOREQUAL, Int32 -> INSTR_i32_GE_S
     ////logic
     //| "and" -> INSTR_i32_AND
     //| "or" -> INSTR_i32_OR
     //extra
-    | _ -> INSTR_END
+    | opName, typeName ->
+        failwith (
+            sprintf
+                "TinyFS: We currently do not support the '%s' operator with the '%s' type"
+                opName
+                (typeName.ToString())
+        )
 
 let resolveLocalSymbols (functionSymbols: FunctionSymbolDict) (name: string) =
-    let containsKey = functionSymbols.localSymbols.ContainsKey name
+    let isLocal = functionSymbols.localSymbols.ContainsKey name
 
-    match containsKey with
-    | true ->
-        let symbol = functionSymbols.localSymbols[name]
-        symbol
-    | false -> failwith $"TinyFS: undeclared identifier: {name}"
+    match isLocal with
+    | true -> functionSymbols.localSymbols[name]
+    | false ->
+        let isParam = functionSymbols.paramSymbols.ContainsKey name
+
+        match isParam with
+        | true -> functionSymbols.paramSymbols[name]
+        | false -> failwith $"TinyFS: undeclared identifier: {name}"
 
 let buildDeclError decl =
     (sprintf "TinyFS: '%s' is currently an unsupported declaration type" (decl.GetType().ToString()))
@@ -349,7 +425,7 @@ let rec exprToWasm
                 aList3 leftWasm rightWasm opWasm
             | _ ->
                 failwith (
-                    sprintf "TinyFS: Was not expecetd %d arguments with %s operator" args.Length memb.CompiledName
+                    sprintf "TinyFS: Was not expecetd %d argument(s) with '%s' operator" args.Length memb.CompiledName
                 )
         | _ ->
             let index =
@@ -395,6 +471,18 @@ let rec exprToWasm
         let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
 
         appendSinList INSTR_LOCAL_GET (i32 localSymbol.index)
+    | FSharpExprPatterns.IfThenElse (guardExpr, thenExpr, elseExpr) ->
+        let guardWasm = exprToWasm guardExpr moduleSymbols functionSymbols
+        let ifCommandWasm = [ INSTR_IF; getBlockType I32 ]
+        let thenWasm = exprToWasm thenExpr moduleSymbols functionSymbols
+        let elseCommandWasm = [ INSTR_ELSE ]
+        let elseWasm = exprToWasm elseExpr moduleSymbols functionSymbols
+        let endingWasm = [ INSTR_END ]
+
+        let wasmBytes =
+            aList6 guardWasm ifCommandWasm thenWasm elseCommandWasm elseWasm endingWasm
+
+        wasmBytes
     //| Const
     //| Operation (kind, _, typ, _) ->
     //    match kind, typ with

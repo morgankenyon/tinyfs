@@ -1,6 +1,7 @@
 ﻿module TinyFS.Test.WatToWasmTests
 
 open Faqt
+open Faqt.AssertionHelpers
 open Faqt.Operators
 open Helpers
 open TinyFS.Core.AstToWasm
@@ -286,3 +287,38 @@ let x (y: int32) =
 
     let response = wasmBytes |> runInt32FuncInt32 "x" param
     response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support invalid F# syntax throw an error`` () =
+    let input =
+        $"""module Test
+
+let x (y) =
+    let z = y
+    z <- z + 3
+    z
+"""
+
+
+    (fun () -> getDeclarations checker input)
+        .Should()
+        .Throw<System.Exception, _>()
+
+[<Fact>]
+let ``Can support mutable variables`` () =
+    let input =
+        $"""module Test
+
+let x (y) =
+    let mutable z = y
+    z <- z + 3
+    z
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "x" 3
+    response.Should().Be(6)

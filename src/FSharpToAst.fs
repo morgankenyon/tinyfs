@@ -21,5 +21,12 @@ let getDeclarations checker (input: string) =
     let checkProjectResults = parseAndCheckSingleFile checker input
     let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
 
-    checkedFile.Declarations
-//let generateAst (compiler) = Compiler.transformFile compiler
+    if (checkProjectResults.Diagnostics.Length > 0) then
+        let errorWriter = System.Console.Error
+
+        for diag in checkProjectResults.Diagnostics do
+            errorWriter.WriteLine(diag.Message)
+
+        failwith ""
+    else
+        checkedFile.Declarations

@@ -36,6 +36,7 @@ let INSTR_ELSE = 0x5uy
 
 [<Literal>]
 let INSTR_END = 0xBuy
+
 [<Literal>]
 let INSTR_BR = 0xCuy
 
@@ -44,6 +45,7 @@ let INSTR_BR_IF = 0xDuy
 
 [<Literal>]
 let INSTR_CALL = 0x10uy
+
 [<Literal>]
 let INSTR_DROP = 0x1Auy
 
@@ -400,8 +402,7 @@ let resolveLocalSymbols (functionSymbols: FunctionSymbolDict) (name: string) =
     let isLocal = functionSymbols.localSymbols.ContainsKey name
 
     match isLocal with
-    | true -> 
-        functionSymbols.localSymbols[name]
+    | true -> functionSymbols.localSymbols[name]
     | false ->
         let isParam = functionSymbols.paramSymbols.ContainsKey name
 
@@ -418,6 +419,7 @@ let getLocalIndex (functionSymbols: FunctionSymbolDict) (sym: SymbolEntry) =
             functionSymbols.paramSymbols
             |> Seq.filter (fun keyVP -> not keyVP.Value.isUnit)
             |> Seq.length
+
         nonUnitParamCount + sym.index
 
 let buildDeclError decl =
@@ -497,9 +499,11 @@ let rec exprToWasm
 
         aList3 leftWasm localWasm rightWasm
     | FSharpExprPatterns.Value (vall) ->
-        let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
+        let localIndex =
+            resolveLocalSymbols functionSymbols vall.CompiledName
+            |> getLocalIndex functionSymbols
 
-        appendSinList INSTR_LOCAL_GET (i32 localSymbol.index)
+        appendSinList INSTR_LOCAL_GET (i32 localIndex)
     | FSharpExprPatterns.IfThenElse (guardExpr, thenExpr, elseExpr) ->
         let guardWasm = exprToWasm guardExpr moduleSymbols functionSymbols
         let ifCommandWasm = [ INSTR_IF; getBlockType I32 ]
@@ -517,11 +521,13 @@ let rec exprToWasm
         let secondWasm = exprToWasm second moduleSymbols functionSymbols
         aList2 firstWasm secondWasm
     | FSharpExprPatterns.ValueSet (valToSet, valueExpr) ->
-        let symbol = resolveLocalSymbols functionSymbols valToSet.CompiledName
+        let symbolIndex =
+            resolveLocalSymbols functionSymbols valToSet.CompiledName
+            |> getLocalIndex functionSymbols
 
         let exprWasm = exprToWasm valueExpr moduleSymbols functionSymbols
 
-        let setWasm = aList3 [ INSTR_LOCAL_TEE ] (i32 symbol.index) [ INSTR_DROP ]
+        let setWasm = aList3 [ INSTR_LOCAL_TEE ] (i32 symbolIndex) [ INSTR_DROP ]
 
         aList2 exprWasm setWasm
     | FSharpExprPatterns.WhileLoop (guardExpr, bodyExpr, _) ->
@@ -529,7 +535,7 @@ let rec exprToWasm
         let guardWasm = exprToWasm guardExpr moduleSymbols functionSymbols
         let ifWasm = [ INSTR_IF; (getBlockType Empty_) ]
         let bodyWasm = exprToWasm bodyExpr moduleSymbols functionSymbols
-        let brWasm = aList3 [ INSTR_BR ] (i32 1) [ INSTR_END; INSTR_END ] 
+        let brWasm = aList3 [ INSTR_BR ] (i32 1) [ INSTR_END; INSTR_END ]
 
         let wasmBytes = aList5 loopWasm guardWasm ifWasm bodyWasm brWasm
         wasmBytes
@@ -605,7 +611,12 @@ let rec exprToSymbolList (functionSymbols: FunctionSymbolDict) expr =
 
         exprToSymbolList functionSymbols letExpr
         exprToSymbolList functionSymbols rightExpr
-
+    | FSharpExprPatterns.Sequential (first, second) ->
+        exprToSymbolList functionSymbols first
+        exprToSymbolList functionSymbols second
+    | FSharpExprPatterns.WhileLoop (guardExpr, bodyExpr, _) ->
+        exprToSymbolList functionSymbols guardExpr
+        exprToSymbolList functionSymbols bodyExpr
     | _ -> ()
 
 let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =

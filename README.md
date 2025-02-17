@@ -8,8 +8,6 @@ TinyFS is a F# to Wasm Compiler.
 
 Current status: Basic int32 arithmetic operators work. 
 
-Everything is currently run through unit tests, there's no CLI to compile a file or fsproj.
-
 ## Installing as Nuget Tool
 
 The fastest way to get started is to install via nuget tool.

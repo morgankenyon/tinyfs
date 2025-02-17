@@ -3,6 +3,20 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>TinyFS.Core</PackageId>
+    <Title>TinyFS.Core</Title>
+    <Version>0.0.1</Version>
+    <Authors>Morgan Kenyon</Authors>
+    <Description>A F# to Wasm Compiler.</Description>
+    <Summary>A F# to Wasm Compiler.</Summary>
+    <PackageProjectUrl>https://github.com/morgankenyon/tinyfs</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/morgankenyon/tinyfs.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>wasm,language</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright © Morgan Kenyon 2025</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,6 +24,7 @@
     <Compile Include="Utils.fs" />
     <Compile Include="FSharpToAst.fs" />
     <Compile Include="AstToWasm.fs" />
+    <Compile Include="EndToEnd.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
@@ -17,18 +32,12 @@
     <PackageReference Include="FSharp.Compiler.Service" Version="43.9.201" />
   </ItemGroup>
 
-
-
-  <ItemGroup>
-    <Reference Include="../lib/fcs/FSharp.Compiler.Service.dll" />
-    <Reference Include="../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
-    <Reference Include="../lib/fcs/FSharp.Core.dll" />
-  </ItemGroup>
-
-
-
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="9.0.201" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

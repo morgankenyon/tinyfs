@@ -1,0 +1,1 @@
+dotnet tool install --global --add-source .\bin\Release\ TinyFS.Cli

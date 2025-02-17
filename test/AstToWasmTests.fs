@@ -231,3 +231,58 @@ let x () =
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(40)
+
+[<Fact>]
+let ``Can handle parameter`` () =
+    let input =
+        $"""module Test
+
+let x (y) =
+    y + 3
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "x" 3
+    response.Should().Be(6)
+
+[<Theory>]
+[<InlineData("y > 0", 3, 10)>]
+[<InlineData("y > 0", -3, -10)>]
+[<InlineData("y < 0", 3, -10)>]
+[<InlineData("y < 0", -3, 10)>]
+[<InlineData("y = 3", 3, 10)>]
+[<InlineData("y = 3", -3, -10)>]
+[<InlineData("y = 3", 6, -10)>]
+[<InlineData("y <> 3", 3, -10)>]
+[<InlineData("y <> 3", -3, 10)>]
+[<InlineData("y <> 3", 6, 10)>]
+[<InlineData("y <= 3", 3, 10)>]
+[<InlineData("y <= 3", -3, 10)>]
+[<InlineData("y <= 3", 6, -10)>]
+[<InlineData("y >= 3", 3, 10)>]
+[<InlineData("y >= 3", -3, -10)>]
+[<InlineData("y >= 3", 6, 10)>]
+let ``Can handle boolean operators expressions`` expr param expected =
+    let input =
+        $"""module Test
+
+let x (y: int32) =
+    let z =
+        if {expr} then
+            10
+        else
+            -10
+    z
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "x" param
+    response.Should().Be(expected)

@@ -4,7 +4,10 @@
 let FS_UNIT = "Microsoft.FSharp.Core.unit"
 
 [<Literal>]
-let FS_INT32 = "Microsoft.FSharp.Core.int"
+let FS_INT32 = "Microsoft.FSharp.Core.int32"
+
+[<Literal>]
+let FS_INT = "Microsoft.FSharp.Core.int"
 
 [<Literal>]
 let FS_OPERATOR = "Microsoft.FSharp.Core.Operators"
@@ -23,6 +26,24 @@ let FS_OP_DIVISION = "op_Division"
 
 [<Literal>]
 let FS_OP_MODULUS = "op_Modulus"
+
+[<Literal>]
+let FS_OP_EQUALITY = "op_Equality"
+
+[<Literal>]
+let FS_OP_INEQUALITY = "op_Inequality"
+
+[<Literal>]
+let FS_OP_GREATERTHAN = "op_GreaterThan"
+
+[<Literal>]
+let FS_OP_GREATERTHANOREQUAL = "op_GreaterThanOrEqual"
+
+[<Literal>]
+let FS_OP_LESSTHAN = "op_LessThan"
+
+[<Literal>]
+let FS_OP_LESSTHANOREQUAL = "op_LessThanOrEqual"
 
 type Types =
     | Int32

@@ -707,8 +707,30 @@ let private getFunctionSymbols (moduleSymbolList: ModuleSymbolList) =
     | Module fnSymbols -> fnSymbols
     | Function _ -> failwith "TinyFS: Should not be locals in AstToWasm.getFunctionSymbols"
 
+let confirmMainFunction (moduleSymbolList: ModuleSymbolList) =
+    let mainName = "main"
+
+    match moduleSymbolList.First.Value with
+    | Module modd ->
+        if modd.ContainsKey mainName then
+            let (functionDict, _) = modd[mainName]
+
+            let nonUnitParamCount =
+                functionDict.paramSymbols
+                |> Seq.filter (fun keyVP -> not keyVP.Value.isUnit)
+                |> Seq.length
+
+            if nonUnitParamCount = 0 then
+                moduleSymbolList
+            else
+                failwith "TinyFS currently requires a zero parameter 'main' function to exist"
+        else
+            failwith "TinyFS requires a zero parameter 'main' function to exist"
+    | Function _ -> failwith "Should not be functions"
+
 let astToWasm (decls: FSharpImplementationFileDeclaration list) =
     buildModuleSymbolList decls
+    |> confirmMainFunction
     |> getFunctionSymbols
     |> defineFunctionDecls decls
     |> buildModule

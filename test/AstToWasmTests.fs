@@ -43,6 +43,8 @@ let ``Can compile and run simple wasm expressions`` expr expected =
 module Test
 
 let x () = {expr}
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -70,6 +72,8 @@ module Test
 
 let x () = {expr}
 let y () = x()
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -97,6 +101,8 @@ module Test
 
 let x () = {expr}
 let y () = x() + 10
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -141,6 +147,8 @@ let ``Can run simple function`` () =
         $"""module Test
 
 let x () = 2342
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -204,6 +212,8 @@ let ``Can support single local param`` () =
 let x () =
     let y = 20
     y
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -223,6 +233,8 @@ let x () =
     let y = 20
     let z = 23
     y + z - 3
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -240,6 +252,8 @@ let ``Can support parameter`` () =
 
 let x (y) =
     y + 3
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -278,6 +292,8 @@ let x (y: int32) =
         else
             -10
     z
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -297,6 +313,8 @@ let x (y) =
     let z = y
     z <- z + 3
     z
+
+let main () = 0
 """
 
 
@@ -313,6 +331,8 @@ let x (y) =
     let mutable z = y
     z <- z + 3
     z
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -333,6 +353,8 @@ let countTo (n) =
     while x < n do
         x <- x + 1
     x
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input
@@ -354,6 +376,8 @@ let countTo (n) =
         let y = x
         x <- x + y + 1
     x
+
+let main () = 0
 """
 
     let declarations = getDeclarations checker input

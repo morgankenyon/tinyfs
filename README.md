@@ -54,7 +54,7 @@ Below lists the following language features that are supported.
 - [ ] `int16`
 - [ ] `uint16`
 - [x] `int/int32`
-- [ ] `uint/uint32`
+- [ ] `uint/uint32` †
 - [ ] `long/int64`
 - [ ] `ulong/uint64`
 - [ ] `nativeint` - probably never
@@ -70,7 +70,7 @@ Below lists the following language features that are supported.
   * `int64`, `float32`, `float64` and `bool`
   * WebAssembly provides builtin support for `int32`, `int64`, `float32` and `float64`. Everything else comes extra.
 
-
+† (WebAssembly's 32 bit integer cannot display values larger (2 ^ 31 - 1)). So a `uint32`  and `int32` max values are the same.
 ### Language Constructs
 
 - [x] `let` bindings

@@ -368,7 +368,12 @@ let getType (strType) =
     | FS_INT
     | FS_INT32 -> Types.Int32
     | FS_UNIT -> Types.Unit
+    | FS_UINT32 -> Types.UInt32
     | _ -> failwith (sprintf "TinyFS: %s is an unknown type" strType)
+
+let getTypeFromFSharpType (typ: FSharpType) = getType typ.BasicQualifiedName
+
+let getTypeFromFSharpExpr (expr: FSharpExpr) = getType expr.Type.BasicQualifiedName
 
 ///Start converting functions
 let operatorToWasm (op: string) (typ: Types) =
@@ -479,14 +484,27 @@ let rec exprToWasm
 
             wasmBytes
     | FSharpExprPatterns.Const (value, typ) ->
-        let typ = getType typ.BasicQualifiedName
+        let wType = getType typ.BasicQualifiedName
 
-        match typ with
+        match wType with
         | Types.Int32 ->
             match convertInt value with
             | Some vall -> appendSinList i32_CONST (i32 vall)
             | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to Int32" (value.ToString()))
-        | _ -> failwith (sprintf "TinyFS: Cannot extract value from %s type" (typ.ToString()))
+        | Types.UInt32 ->
+            match convertUInt value with
+            | Some vall ->
+                if vall > (uint32) Int32.MaxValue then
+                    failwith (
+                        sprintf
+                            "TinyFS: %d is a larger uint32 value than WebAssembly's max of %d"
+                            vall
+                            ((uint32) Int32.MaxValue)
+                    )
+                else
+                    appendSinList i32_CONST (u32 vall)
+            | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to UInt32" (value.ToString()))
+        | _ -> failwith (sprintf "TinyFS: Cannot extract value from %s type" (wType.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
         let leftWasm = exprToWasm letExpr moduleSymbols functionSymbols
         let rightWasm = exprToWasm rightExpr moduleSymbols functionSymbols
@@ -552,6 +570,7 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                 //if that a zero parameter function? Or is that a module wide variable??
                 //does it matter??
                 let name = vall.CompiledName
+                let bodyType = getTypeFromFSharpExpr body
 
                 let (functionSymbols, idx) =
 
@@ -574,13 +593,19 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     |> Seq.sortBy (fun sym -> sym.index)
                     |> Seq.length
 
+                let locals =
+                    if varsCount > 0 then
+                        [ locals varsCount i32_VAL_TYPE ]
+                    else
+                        []
+
                 let bodyWasm = exprToWasm body moduleSymbols functionSymbols
 
                 let functionDecls: WasmFuncBytes list =
                     [ { name = name
                         paramTypes = paramTypes
                         resultType = i32_VAL_TYPE
-                        localBytes = [ locals varsCount i32_VAL_TYPE ]
+                        localBytes = locals
                         body = appendListSin bodyWasm INSTR_END } ]
 
                 functionDecls

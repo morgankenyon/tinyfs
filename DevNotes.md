@@ -1,5 +1,11 @@
 # Developer Notes
 
+## Tagging a Release
+
+```
+git tag -a v0.0.1 -m "First release of TinyFS"
+git push origin tag v0.0.1
+```
 ## Error
 
 ```

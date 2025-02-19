@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Helpers.fs" />
+    <Compile Include="Leb128Tests.fs" />
     <Compile Include="FSharpToAstTests.fs" />
     <Compile Include="AstToWasmTests.fs" />
     <Compile Include="Program.fs" />

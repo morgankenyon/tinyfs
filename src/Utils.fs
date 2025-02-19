@@ -7,6 +7,11 @@ let convertInt (o: obj) =
     | true, int -> Some int
     | _ -> None
 
+let convertUInt (o: obj) =
+    match System.UInt32.TryParse(o.ToString()) with
+    | true, uint -> Some uint
+    | _ -> None
+
 let determineExprPattern (expr) =
     match expr with
     | FSharpExprPatterns.AddressOf (a1) -> "AddressOf"

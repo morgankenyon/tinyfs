@@ -3,12 +3,13 @@
 open Faqt
 open Faqt.AssertionHelpers
 open Faqt.Operators
+open FSharp.Compiler.CodeAnalysis
 open Helpers
+open System
 open TinyFS.Core.AstToWasm
 open TinyFS.Core.FSharpToAst
 open TinyFS.Core.FSharpTypes
 open Xunit
-open FSharp.Compiler.CodeAnalysis
 
 let checker: FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
 
@@ -305,7 +306,7 @@ let main () = 0
     response.Should().Be(expected)
 
 [<Fact>]
-let ``Can support invalid F# syntax throw an error`` () =
+let ``Can throw when invalid F# syntax`` () =
     let input =
         $"""module Test
 
@@ -389,18 +390,19 @@ let main () = 0
     response.Should().Be(63)
 
 [<Theory>]
-[<InlineData("1u", 1u)>]
-// [<InlineData("1 + 3", 4)>]
-// [<InlineData("1 + 3 + 2", 6)>]
-// [<InlineData("1 - 3", -2)>]
-// [<InlineData("10 / 2", 5)>]
-// [<InlineData("11 / 2", 5)>]
-// [<InlineData("14 / 5", 2)>]
-// [<InlineData("11 % 2", 1)>]
-// [<InlineData("14 % 5", 4)>]
-// [<InlineData("10 * 15", 150)>]
-// [<InlineData("10 * 15 + 10", 160)>]
-// [<InlineData("10 * (15 + 10)", 250)>]
+[<InlineData("0u", 0)>]
+[<InlineData("2147483647u", Int32.MaxValue)>]
+[<InlineData("1u + 3u", 4)>]
+[<InlineData("1u + 3u + 2u", 6)>]
+[<InlineData("1u - 3u", -2)>]
+[<InlineData("10u / 2u", 5)>]
+[<InlineData("11u / 2u", 5)>]
+[<InlineData("14u / 5u", 2)>]
+[<InlineData("11u % 2u", 1)>]
+[<InlineData("14u % 5u", 4)>]
+[<InlineData("10u * 15u", 150)>]
+[<InlineData("10u * 15u + 10u", 160)>]
+[<InlineData("10u * (15u + 10u)", 250)>]
 let ``Can compile and run uint32 wasm expressions`` expr expected =
     let input =
         $"""
@@ -412,7 +414,22 @@ let main () = {expr}
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
-    let response = wasmBytes |> runFuncUint32Return "main"
+    let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
+
+[<Fact>]
+let ``Can throw when unsigned number is too large`` () =
+    let input =
+        $"""
+module Test
+
+let main () = 2147483648u
+"""
+
+    let declarations = getDeclarations checker input
+
+    (fun () -> astToWasm declarations)
+        .Should()
+        .Throw<System.Exception, _>()

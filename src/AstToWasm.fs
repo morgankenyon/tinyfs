@@ -493,7 +493,16 @@ let rec exprToWasm
             | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to Int32" (value.ToString()))
         | Types.UInt32 ->
             match convertUInt value with
-            | Some vall -> appendSinList i32_CONST (u32 vall)
+            | Some vall ->
+                if vall > (uint32) Int32.MaxValue then
+                    failwith (
+                        sprintf
+                            "TinyFS: %d is a larger uint32 value than WebAssembly's max of %d"
+                            vall
+                            ((uint32) Int32.MaxValue)
+                    )
+                else
+                    appendSinList i32_CONST (u32 vall)
             | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to UInt32" (value.ToString()))
         | _ -> failwith (sprintf "TinyFS: Cannot extract value from %s type" (wType.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
@@ -584,13 +593,19 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     |> Seq.sortBy (fun sym -> sym.index)
                     |> Seq.length
 
+                let locals =
+                    if varsCount > 0 then
+                        [ locals varsCount i32_VAL_TYPE ]
+                    else
+                        []
+
                 let bodyWasm = exprToWasm body moduleSymbols functionSymbols
 
                 let functionDecls: WasmFuncBytes list =
                     [ { name = name
                         paramTypes = paramTypes
                         resultType = i32_VAL_TYPE
-                        localBytes = [ locals varsCount i32_VAL_TYPE ]
+                        localBytes = locals
                         body = appendListSin bodyWasm INSTR_END } ]
 
                 functionDecls

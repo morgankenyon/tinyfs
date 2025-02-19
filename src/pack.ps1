@@ -1,0 +1,1 @@
+dotnet pack TinyFS.Core.fsproj -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg

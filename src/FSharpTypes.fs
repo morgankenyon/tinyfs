@@ -10,6 +10,12 @@ let FS_INT32 = "Microsoft.FSharp.Core.int32"
 let FS_INT = "Microsoft.FSharp.Core.int"
 
 [<Literal>]
+let FS_UINT32 = "Microsoft.FSharp.Core.uint32"
+
+// [<Literal>]
+// let FS_UINT = "Microsoft.FSharp.Core.uint"
+
+[<Literal>]
 let FS_OPERATOR = "Microsoft.FSharp.Core.Operators"
 
 [<Literal>]
@@ -47,5 +53,6 @@ let FS_OP_LESSTHANOREQUAL = "op_LessThanOrEqual"
 
 type Types =
     | Int32
+    | UInt32
     | Unit
     | Any

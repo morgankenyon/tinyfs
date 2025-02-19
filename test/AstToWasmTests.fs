@@ -387,3 +387,32 @@ let main () = 0
 
     let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
     response.Should().Be(63)
+
+[<Theory>]
+[<InlineData("1u", 1u)>]
+// [<InlineData("1 + 3", 4)>]
+// [<InlineData("1 + 3 + 2", 6)>]
+// [<InlineData("1 - 3", -2)>]
+// [<InlineData("10 / 2", 5)>]
+// [<InlineData("11 / 2", 5)>]
+// [<InlineData("14 / 5", 2)>]
+// [<InlineData("11 % 2", 1)>]
+// [<InlineData("14 % 5", 4)>]
+// [<InlineData("10 * 15", 150)>]
+// [<InlineData("10 * 15 + 10", 160)>]
+// [<InlineData("10 * (15 + 10)", 250)>]
+let ``Can compile and run uint32 wasm expressions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let main () = {expr}
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncUint32Return "main"
+    response.Should().Be(expected)

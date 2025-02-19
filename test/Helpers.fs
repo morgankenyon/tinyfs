@@ -33,3 +33,11 @@ let runInt32FuncInt32 (funcName: string) (param1: int32) (wasmBytes: byte list) 
 
     let func = instance.GetFunction<int32, int32>(funcName)
     func.Invoke(param1)
+
+let runFuncUint32Return (funcName: string) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let functions = instance.GetFunctions()
+
+    let func = instance.GetFunction<uint32>(funcName)
+    func.Invoke()

@@ -38,9 +38,9 @@ This is still alpha software, bugs are to be expected. The more complex the code
 
 ## Supported Syntax
 
-Below lists the following language features that are supported. 
-
 I don't think my overal goal is to get to 100%, but probably target the 20% of language features that cover 80% of use cases. The easier a language construct is able to be mapped into WebAssembly the more likely it is to be implemented.
+
+Below lists the following language features that are supported. 
 
 > Please see the [examples](./examples/) folder for examples of compileable F# syntax that is ready to be used.
 

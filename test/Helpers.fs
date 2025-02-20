@@ -28,8 +28,20 @@ let runFuncInt32Return (funcName: string) (wasmBytes: byte list) =
     let func = instance.GetFunction<int32>(funcName)
     func.Invoke()
 
+let runFuncInt64Return (funcName: string) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let func = instance.GetFunction<int64>(funcName)
+    func.Invoke()
+
 let runInt32FuncInt32 (funcName: string) (param1: int32) (wasmBytes: byte list) =
     let instance = buildInstance wasmBytes
 
     let func = instance.GetFunction<int32, int32>(funcName)
+    func.Invoke(param1)
+
+let runInt64FuncInt64 (funcName: string) (param1: int64) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let func = instance.GetFunction<int64, int64>(funcName)
     func.Invoke(param1)

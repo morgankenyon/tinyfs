@@ -50,12 +50,12 @@ Below lists the following language features that are supported.
 
 - [ ] `bool`
 - [ ] `byte`
-- [x] `sbyte`
-- [x] `int16`
+- [x] `sbyte` - by up converting to WebAssembly's `i32`
+- [x] `int16` - by up converting to WebAssembly's `i32`
 - [ ] `uint16`
 - [x] `int/int32`
 - [ ] `uint/uint32`
-- [ ] `long/int64`
+- [x] `long/int64`
 - [ ] `ulong/uint64`
 - [ ] `nativeint` - probably never
 - [ ] `unativeint` - probably never

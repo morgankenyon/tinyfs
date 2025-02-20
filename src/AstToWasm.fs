@@ -689,7 +689,7 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     else
                         failwith (sprintf "TinyFS: Cannot find symbolDict for %s" name)
 
-                let paramTypes =
+                let paramWasm =
                     functionSymbols.paramSymbols
                     |> Seq.map (fun keyVP -> keyVP.Value)
                     |> Seq.filter (fun sym -> not sym.isUnit)
@@ -697,11 +697,15 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     |> Seq.map (fun sym -> getResultType sym.typ)
                     |> Seq.toList
 
-                let varsCount =
+                //could probably optimize this
+                //instead of a in order mapping, group by
+                //type then map to locals
+                let localWasm =
                     functionSymbols.localSymbols
                     |> Seq.map (fun keyVP -> keyVP.Value)
                     |> Seq.sortBy (fun sym -> sym.index)
-                    |> Seq.length
+                    |> Seq.map (fun sym -> [ locals 1 (getResultType sym.typ) ])
+                    |> List.concat
 
                 let bodyWasm = exprToWasm body moduleSymbols functionSymbols
 
@@ -713,9 +717,9 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
 
                 let functionDecls: WasmFuncBytes list =
                     [ { name = name
-                        paramTypes = paramTypes
+                        paramTypes = paramWasm
                         resultType = resultType
-                        localBytes = [ locals varsCount i32_VAL_TYPE ]
+                        localBytes = localWasm
                         body = appendListSin bodyWasm INSTR_END } ]
 
                 functionDecls

@@ -386,10 +386,35 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    //printWasm wasmBytes
+    printWasm wasmBytes
 
-    let response = wasmBytes |> runFuncInt32Return "main"
+    let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(40)
+
+[<Fact>]
+let ``Can support many int64 params`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let a = 20L
+    let b = 20L
+    let c = 20L
+    let d = 20L
+    let e = 20L
+    let f = 20L
+    let g = 20L
+    let h = 20L
+    a + b + c + d + e + f + g + h
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt64Return "main"
+    response.Should().Be(160)
 
 [<Fact>]
 let ``Can support sbyte parameter`` () =

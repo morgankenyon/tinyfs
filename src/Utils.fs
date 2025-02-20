@@ -1,6 +1,25 @@
 ﻿module TinyFS.Core.Utils
 
+open System
 open FSharp.Compiler.Symbols
+
+let stringToBytes (s: string) : byte list =
+    System.Text.Encoding.UTF8.GetBytes(s)
+    |> Array.toList
+
+let int32ToBytes (v: int32) : byte list =
+    let bytes = BitConverter.GetBytes(v) |> Array.toList
+
+    match BitConverter.IsLittleEndian with
+    | true -> bytes
+    | false -> List.rev bytes
+
+let uint32ToBytes (v: uint32) : byte list =
+    let bytes = BitConverter.GetBytes(v) |> Array.toList
+
+    match BitConverter.IsLittleEndian with
+    | true -> bytes
+    | false -> List.rev bytes
 
 let convertSByte (o: obj) =
     match System.SByte.TryParse(o.ToString()) with
@@ -78,3 +97,107 @@ type TinyFSException(msg: string) =
     inherit System.Exception(msg)
 
 let tinyfail (msg: string) = raise (new TinyFSException(msg))
+
+
+[<Literal>]
+let SEVEN_BIT_MASK = 0x7f
+
+[<Literal>]
+let SEVEN_BIT_MASK_U: uint32 = 0x7fu
+
+[<Literal>]
+let SEVEN_BIT_MASK_S: int32 = 0x7f
+
+[<Literal>]
+let CONTINUATION_BIT: byte = 0x80uy
+
+let u32 (v: uint32) : byte list =
+    let mutable vall = v
+    let mutable r: byte list = []
+    let mutable more = true
+
+    while more do
+        let b: byte = (byte) (vall &&& SEVEN_BIT_MASK_U)
+        vall <- vall >>> 7
+        more <- vall <> 0u
+
+        let newVall =
+            if more then
+                b ||| CONTINUATION_BIT
+            else
+                b
+
+        r <- r @ [ newVall ]
+
+    r
+
+let i64 (v: int64) : byte list =
+    let mutable vall = v
+    let mutable r: byte list = []
+    let mutable more = true
+    let signBit = 64uy
+
+    while more do
+        let b: byte = (byte) (vall &&& SEVEN_BIT_MASK_S)
+        let signBitSet = (b &&& signBit) <> 0uy
+
+        vall <- vall >>> 7
+
+        let nextVall =
+            if ((vall = 0 && (not signBitSet))
+                || (vall = -1 && signBitSet)) then
+                more <- false
+                b
+            else
+                b ||| CONTINUATION_BIT
+
+        r <- r @ [ nextVall ]
+
+    r
+
+let i32 (v: int32) : byte list =
+    let mutable vall = v
+    let mutable r: byte list = []
+    let mutable more = true
+    let signBit = 64uy
+
+    while more do
+        let b: byte = (byte) (vall &&& SEVEN_BIT_MASK_S)
+        let signBitSet = (b &&& signBit) <> 0uy
+
+        vall <- vall >>> 7
+
+        let nextVall =
+            if ((vall = 0 && (not signBitSet))
+                || (vall = -1 && signBitSet)) then
+                more <- false
+                b
+            else
+                b ||| CONTINUATION_BIT
+
+        r <- r @ [ nextVall ]
+
+    r
+
+let i8 (v: sbyte) = System.Convert.ToInt32(v) |> i32
+let i16 (v: int16) = System.Convert.ToInt32(v) |> i32
+
+///List helper methods
+let toList ele = [ ele ]
+///Append two list together
+let appendList a1 a2 = a1 @ a2
+let aList a1 a2 = appendList a1 a2
+///Append single element with an list
+let appendSinList s a = [ s ] @ a
+///Append alist with a single element
+let appendListSin a s = a @ [ s ]
+///Append to List with 2 parameters
+let aList2 l1 l2 = l1 @ l2
+///Append to List with 3 parameters
+let aList3 l1 l2 l3 = l1 @ l2 @ l3
+///Append to List with 4 parameters
+let aList4 l1 l2 l3 l4 = l1 @ l2 @ l3 @ l4
+///Append to List with 5 parameters
+let aList5 l1 l2 l3 l4 l5 = l1 @ l2 @ l3 @ l4 @ l5
+///Append to List with 6 parameters
+let aList6 l1 l2 l3 l4 l5 l6 = l1 @ l2 @ l3 @ l4 @ l5 @ l6

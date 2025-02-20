@@ -26,7 +26,6 @@
     <Compile Include="FSharpToAst.fs" />
     <Compile Include="AstToWasm.fs" />
     <Compile Include="EndToEnd.fs" />
-    <Compile Include="Library.fs" />
   </ItemGroup>
 
   <ItemGroup>

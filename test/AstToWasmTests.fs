@@ -37,7 +37,7 @@ let getModuleSymbols (moduleSymbols: ModuleSymbolList) =
 [<InlineData("10 * 15", 150)>]
 [<InlineData("10 * 15 + 10", 160)>]
 [<InlineData("10 * (15 + 10)", 250)>]
-let ``Can compile and run simple wasm expressions`` expr expected =
+let ``Can compile and run int32 expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -53,6 +53,35 @@ let main () = 0
     //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "x"
+    response.Should().Be(expected)
+
+[<Theory>]
+[<InlineData("1y", 1)>]
+[<InlineData("1y + 3y", 4)>]
+[<InlineData("1y + 3y + 2y", 6)>]
+[<InlineData("1y - 3y", -2)>]
+[<InlineData("10y / 2y", 5)>]
+[<InlineData("11y / 2y", 5)>]
+[<InlineData("14y / 5y", 2)>]
+[<InlineData("11y % 2y", 1)>]
+[<InlineData("14y % 5y", 4)>]
+[<InlineData("10y * 15y", 150)>]
+[<InlineData("10y * 15y + 10y", 160)>]
+[<InlineData("10y * (15y + 10y)", 250)>]
+let ``Can compile and run sbyte expressions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let main () = {expr}
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
 
 [<Theory>]

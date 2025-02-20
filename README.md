@@ -50,7 +50,7 @@ Below lists the following language features that are supported.
 
 - [ ] `bool`
 - [ ] `byte`
-- [ ] `sbyte`
+- [x] `sbyte`
 - [ ] `int16`
 - [ ] `uint16`
 - [x] `int/int32`

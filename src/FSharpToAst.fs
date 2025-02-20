@@ -4,8 +4,6 @@ open FSharp.Compiler.CodeAnalysis
 open System.IO
 open FSharp.Compiler.Text
 
-//let checker: FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
-
 let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     let file = Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".fsx")
     File.WriteAllText(file, input)

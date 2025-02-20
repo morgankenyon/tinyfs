@@ -20,12 +20,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="FSharpTypes.fs" />
+    <Compile Include="WasmLiterals.fs" />
+    <Compile Include="TypeInfos.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="FSharpToAst.fs" />
     <Compile Include="AstToWasm.fs" />
     <Compile Include="EndToEnd.fs" />
-    <Compile Include="Library.fs" />
   </ItemGroup>
 
   <ItemGroup>

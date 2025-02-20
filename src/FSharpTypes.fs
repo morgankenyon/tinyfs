@@ -1,6 +1,15 @@
 ﻿module TinyFS.Core.FSharpTypes
 
 [<Literal>]
+let FS_SBYTE = "Microsoft.FSharp.Core.sbyte"
+
+[<Literal>]
+let FS_INT16 = "Microsoft.FSharp.Core.int16"
+
+[<Literal>]
+let FS_INT64 = "Microsoft.FSharp.Core.int64"
+
+[<Literal>]
 let FS_UNIT = "Microsoft.FSharp.Core.unit"
 
 [<Literal>]
@@ -10,10 +19,7 @@ let FS_INT32 = "Microsoft.FSharp.Core.int32"
 let FS_INT = "Microsoft.FSharp.Core.int"
 
 [<Literal>]
-let FS_SBYTE = "Microsoft.FSharp.Core.sbyte"
-
-[<Literal>]
-let FS_INT16 = "Microsoft.FSharp.Core.int16"
+let FS_BOOL = "Microsoft.FSharp.Core.bool"
 
 [<Literal>]
 let FS_OPERATOR = "Microsoft.FSharp.Core.Operators"
@@ -55,5 +61,7 @@ type Types =
     | SByte
     | Int16
     | Int32
+    | Int64
+    | Bool
     | Unit
     | Any

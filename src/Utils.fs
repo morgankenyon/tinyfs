@@ -2,11 +2,6 @@
 
 open FSharp.Compiler.Symbols
 
-let convertInt (o: obj) =
-    match System.Int32.TryParse(o.ToString()) with
-    | true, int -> Some int
-    | _ -> None
-
 let convertSByte (o: obj) =
     match System.SByte.TryParse(o.ToString()) with
     | true, sb -> Some sb
@@ -15,6 +10,16 @@ let convertSByte (o: obj) =
 let convertInt16 (o: obj) =
     match System.Int16.TryParse(o.ToString()) with
     | true, sb -> Some sb
+    | _ -> None
+
+let convertInt (o: obj) =
+    match System.Int32.TryParse(o.ToString()) with
+    | true, int -> Some int
+    | _ -> None
+
+let convertInt64 (o: obj) =
+    match System.Int64.TryParse(o.ToString()) with
+    | true, int -> Some int
     | _ -> None
 
 let determineExprPattern (expr) =

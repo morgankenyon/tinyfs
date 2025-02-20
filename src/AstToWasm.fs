@@ -107,6 +107,36 @@ let INSTR_i32_GE_S = 0x4Euy
 let INSTR_i32_GE_U = 0x4Fuy
 
 [<Literal>]
+let INSTR_i64_EQ = 0x51uy
+
+[<Literal>]
+let INSTR_i64_NE = 0x52uy
+
+[<Literal>]
+let INSTR_i64_LT_S = 0x53uy
+
+[<Literal>]
+let INSTR_i64_LT_U = 0x54uy
+
+[<Literal>]
+let INSTR_i64_GT_S = 0x55uy
+
+[<Literal>]
+let INSTR_i64_GT_U = 0x56uy
+
+[<Literal>]
+let INSTR_i64_LE_S = 0x57uy
+
+[<Literal>]
+let INSTR_i64_LE_U = 0x58uy
+
+[<Literal>]
+let INSTR_i64_GE_S = 0x59uy
+
+[<Literal>]
+let INSTR_i64_GE_U = 0x5Auy
+
+[<Literal>]
 let TYPE_FUNCTION = 0x60uy
 
 [<Literal>]
@@ -122,7 +152,34 @@ let INSTR_i32_MUL = 0x6Cuy
 let INSTR_i32_DIV_S = 0x6Duy
 
 [<Literal>]
+let INSTR_i32_DIV_U = 0x6Euy
+
+[<Literal>]
 let INSTR_i32_MOD_S = 0x6Fuy
+
+[<Literal>]
+let INSTR_i32_MOD_U = 0x70uy
+
+[<Literal>]
+let INSTR_i64_ADD = 0x7Cuy
+
+[<Literal>]
+let INSTR_i64_SUB = 0x7Duy
+
+[<Literal>]
+let INSTR_i64_MUL = 0x7Euy
+
+[<Literal>]
+let INSTR_i64_DIV_S = 0x7Fuy
+
+[<Literal>]
+let INSTR_i64_DIV_U = 0x80uy
+
+[<Literal>]
+let INSTR_i64_MOD_S = 0x81uy
+
+[<Literal>]
+let INSTR_i64_MOD_U = 0x82uy
 
 [<Literal>]
 let f64_VAL_TYPE = 0x7Cuy
@@ -237,6 +294,30 @@ let u32 (v: uint32) : byte list =
                 b
 
         r <- r @ [ newVall ]
+
+    r
+
+let i64 (v: int64) : byte list =
+    let mutable vall = v
+    let mutable r: byte list = []
+    let mutable more = true
+    let signBit = 64uy
+
+    while more do
+        let b: byte = (byte) (vall &&& SEVEN_BIT_MASK_S)
+        let signBitSet = (b &&& signBit) <> 0uy
+
+        vall <- vall >>> 7
+
+        let nextVall =
+            if ((vall = 0 && (not signBitSet))
+                || (vall = -1 && signBitSet)) then
+                more <- false
+                b
+            else
+                b ||| CONTINUATION_BIT
+
+        r <- r @ [ nextVall ]
 
     r
 
@@ -363,31 +444,61 @@ let getBlockType bType =
     | F32 -> f32_VAL_TYPE
     | F64 -> f64_VAL_TYPE
 
+let getResultType typ =
+    match typ with
+    | Types.SByte
+    | Types.Int16
+    | Types.Int32 -> i32_VAL_TYPE
+    | Types.Int64 -> i64_VAL_TYPE
+    | _ -> tinyfail (sprintf "Currently does not support '%s' result type" (typ.ToString()))
+
 let getType (strType) =
     match strType with
-    | FS_INT
-    | FS_INT32 -> Types.Int32
-    | FS_UNIT -> Types.Unit
     | FS_SBYTE -> Types.SByte
     | FS_INT16 -> Types.Int16
+    | FS_INT
+    | FS_INT32 -> Types.Int32
+    | FS_INT64 -> Types.Int64
+    | FS_BOOL -> Types.Bool
+    | FS_UNIT -> Types.Unit
     | _ -> tinyfail (sprintf "'%s' is an unknown type" strType)
+
+let getOperatorType typ =
+    match typ with
+    | Types.Bool
+    | Types.SByte
+    | Types.Int16
+    | Types.Int32 -> Types.Int32
+    | Types.Int64 -> Types.Int64
+    | _ -> tinyfail (sprintf "Currently does not support '%s' operator type" (typ.ToString()))
 
 ///Start converting functions
 let operatorToWasm (op: string) (typ: Types) =
     match op, typ with
     //arithmetic
     | FS_OP_ADDITION, Int32 -> INSTR_i32_ADD
+    | FS_OP_ADDITION, Int64 -> INSTR_i64_ADD
     | FS_OP_SUBTRACTION, Int32 -> INSTR_i32_SUB
+    | FS_OP_SUBTRACTION, Int64 -> INSTR_i64_SUB
     | FS_OP_MULTIPLY, Int32 -> INSTR_i32_MUL
+    | FS_OP_MULTIPLY, Int64 -> INSTR_i64_MUL
     | FS_OP_DIVISION, Int32 -> INSTR_i32_DIV_S
+    | FS_OP_DIVISION, Int64 -> INSTR_i64_DIV_S
     | FS_OP_MODULUS, Int32 -> INSTR_i32_MOD_S
+    | FS_OP_MODULUS, Int64 -> INSTR_i64_MOD_S
     //comparison
     | FS_OP_EQUALITY, Int32 -> INSTR_i32_EQ
+    | FS_OP_EQUALITY, Int64 -> INSTR_i64_EQ
     | FS_OP_INEQUALITY, Int32 -> INSTR_i32_NE
+    | FS_OP_INEQUALITY, Int64 -> INSTR_i64_NE
     | FS_OP_LESSTHAN, Int32 -> INSTR_i32_LT_S
+    | FS_OP_LESSTHAN, Int64 -> INSTR_i64_LT_S
     | FS_OP_LESSTHANOREQUAL, Int32 -> INSTR_i32_LE_S
+    | FS_OP_LESSTHANOREQUAL, Int64 -> INSTR_i64_LE_S
     | FS_OP_GREATERTHAN, Int32 -> INSTR_i32_GT_S
+    | FS_OP_GREATERTHAN, Int64 -> INSTR_i64_GT_S
     | FS_OP_GREATERTHANOREQUAL, Int32 -> INSTR_i32_GE_S
+    | FS_OP_GREATERTHANOREQUAL, Int64 -> INSTR_i64_GE_S
     ////logic
     //| "and" -> INSTR_i32_AND
     //| "or" -> INSTR_i32_OR
@@ -445,12 +556,16 @@ let rec exprToWasm
     (functionSymbols: FunctionSymbolDict)
     : byte list =
     match expr with
-    | FSharpExprPatterns.Call (expr, memb, ownerGenArgs, memberGenArgs, args) ->
+    | FSharpExprPatterns.Call (callExpr, memb, ownerGenArgs, memberGenArgs, args) ->
         match isOperator memb with
         | true, opName ->
             match args.Length with
             | 2 ->
-                let opWasm = operatorToWasm opName Types.Int32 |> toList
+                let exprType =
+                    getType expr.Type.BasicQualifiedName
+                    |> getOperatorType
+
+                let opWasm = operatorToWasm opName exprType |> toList
 
                 let leftWasm = exprToWasm args[0] moduleSymbols functionSymbols
                 let rightWasm = exprToWasm args[1] moduleSymbols functionSymbols
@@ -495,7 +610,11 @@ let rec exprToWasm
         | Types.Int16 ->
             match convertInt16 value with
             | Some vall -> appendSinList i32_CONST (i16 vall)
-            | None -> tinyfail (sprintf "Cannot convert '%s' to SByte" (value.ToString()))
+            | None -> tinyfail (sprintf "Cannot convert '%s' to Int16" (value.ToString()))
+        | Types.Int64 ->
+            match convertInt64 value with
+            | Some vall -> appendSinList i64_CONST (i64 vall)
+            | None -> tinyfail (sprintf "Cannot convert '%s' to Int64" (value.ToString()))
         | _ -> tinyfail (sprintf "Cannot extract value from '%s' type" (typ.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
         let leftWasm = exprToWasm letExpr moduleSymbols functionSymbols
@@ -575,7 +694,7 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     |> Seq.map (fun keyVP -> keyVP.Value)
                     |> Seq.filter (fun sym -> not sym.isUnit)
                     |> Seq.sortBy (fun sym -> sym.index)
-                    |> Seq.map (fun _ -> i32_VAL_TYPE)
+                    |> Seq.map (fun sym -> getResultType sym.typ)
                     |> Seq.toList
 
                 let varsCount =
@@ -586,10 +705,16 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
 
                 let bodyWasm = exprToWasm body moduleSymbols functionSymbols
 
+                let resultType =
+                    body.Type.BasicQualifiedName
+                    |> getType
+                    |> getResultType
+
+
                 let functionDecls: WasmFuncBytes list =
                     [ { name = name
                         paramTypes = paramTypes
-                        resultType = i32_VAL_TYPE
+                        resultType = resultType
                         localBytes = [ locals varsCount i32_VAL_TYPE ]
                         body = appendListSin bodyWasm INSTR_END } ]
 

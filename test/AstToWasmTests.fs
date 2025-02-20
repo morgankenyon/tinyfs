@@ -97,7 +97,7 @@ let main () = {expr}
 [<InlineData("10s * 15s", 150)>]
 [<InlineData("10s * 15s + 10s", 160)>]
 [<InlineData("10s * (15s + 10s)", 250)>]
-let ``Can compile and run in16 expressions`` expr expected =
+let ``Can compile and run int16 expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -111,6 +111,37 @@ let main () = {expr}
     //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)
+
+[<Theory>]
+[<InlineData("1L", 1L)>]
+[<InlineData("4_294_967_594L", 4_294_967_594L)>]
+[<InlineData("1L + 3L", 4L)>]
+[<InlineData("2_147_483_657L + 2_147_483_937L", 4_294_967_594L)>]
+[<InlineData("1L + 3L + 2L", 6L)>]
+[<InlineData("1L - 3L", -2L)>]
+[<InlineData("10L / 2L", 5L)>]
+[<InlineData("11L / 2L", 5L)>]
+[<InlineData("14L / 5L", 2L)>]
+[<InlineData("11L % 2L", 1L)>]
+[<InlineData("14L % 5L", 4L)>]
+[<InlineData("10L * 15L", 150L)>]
+[<InlineData("10L * 15L  + 10L", 160L)>]
+[<InlineData("10L * (15L + 10L)", 250L)>]
+let ``Can compile and run int64 expressions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let main () = {expr}
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(expected)
 
 [<Theory>]
@@ -283,7 +314,45 @@ let main () = 0
     response.Should().Be(20)
 
 [<Fact>]
-let ``Can support local params`` () =
+let ``Can support local sbyte params`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let y = 20y
+    let z = 23y
+    y + z - 3y
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(40)
+
+[<Fact>]
+let ``Can support local int16 params`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let y = 20s
+    let z = 23s
+    y + z - 3s
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(40)
+
+[<Fact>]
+let ``Can support local int32 params`` () =
     let input =
         $"""module Test
 
@@ -304,14 +373,14 @@ let main () = 0
     response.Should().Be(40)
 
 [<Fact>]
-let ``Can support parameter`` () =
+let ``Can support local int64 params`` () =
     let input =
         $"""module Test
 
-let x (y) =
-    y + 3
-
-let main () = 0
+let main () =
+    let y = 20L
+    let z = 23L
+    y + z - 3L
 """
 
     let declarations = getDeclarations checker input
@@ -319,8 +388,160 @@ let main () = 0
 
     //printWasm wasmBytes
 
-    let response = wasmBytes |> runInt32FuncInt32 "x" 3
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(40)
+
+[<Fact>]
+let ``Can support sbyte parameter`` () =
+    let input =
+        $"""module Test
+
+let add (num1: sbyte) =
+    num1 + 3y
+
+let main () = add 3y
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(6)
+
+[<Fact>]
+let ``Can support multiple sbyte parameters`` () =
+    let input =
+        $"""module Test
+
+let add (num1: sbyte) (num2: sbyte) =
+    num1 + 3y + num2
+
+let main () = add 3y 6y
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(12)
+
+[<Fact>]
+let ``Can support int16 parameter`` () =
+    let input =
+        $"""module Test
+
+let add (num1: int16) =
+    num1 + 3s
+
+let main () = add 3s
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(6)
+
+[<Fact>]
+let ``Can support multiple int16 parameters`` () =
+    let input =
+        $"""module Test
+
+let add (num1: int16) (num2: int16) =
+    num1 + 3s + num2
+
+let main () = add 3s 6s
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(12)
+
+[<Fact>]
+let ``Can support int32 parameter`` () =
+    let input =
+        $"""module Test
+
+let add (num1: int32) =
+    num1 + 3
+
+let main () = add 3
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(6)
+
+[<Fact>]
+let ``Can support multiple int32 parameters`` () =
+    let input =
+        $"""module Test
+
+let add (num1: int32) (num2: int32) =
+    num1 + 3 + num2
+
+let main () = add 3 6
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(12)
+
+[<Fact>]
+let ``Can support int64 parameter`` () =
+    let input =
+        $"""module Test
+
+let add (num1: int64) =
+    num1 + 3L
+
+let main () = add 3L
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt64Return "main"
+    response.Should().Be(6)
+
+[<Fact>]
+let ``Can support multiple int64 parameters`` () =
+    let input =
+        $"""module Test
+
+let add (num1: int64) (num2: int64) =
+    num1 + 3L + num2
+
+let main () = add 3L 6L
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt64Return "main"
+    response.Should().Be(12)
 
 [<Theory>]
 [<InlineData("y > 0", 3, 10)>]

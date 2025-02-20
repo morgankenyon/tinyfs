@@ -136,9 +136,6 @@ let i64_VAL_TYPE = 0x7Euy
 [<Literal>]
 let i32_VAL_TYPE = 0x7Fuy
 
-
-
-
 type FSharpDeclaration = FSharpImplementationFileDeclaration
 
 ///Contains the wasm byte representations of a F# function
@@ -267,6 +264,8 @@ let i32 (v: int32) : byte list =
 
     r
 
+let i8 (v: sbyte) : byte list = System.Convert.ToInt32(v) |> i32
+
 ///List helper methods
 let toList ele = [ ele ]
 ///Append two list together
@@ -368,7 +367,8 @@ let getType (strType) =
     | FS_INT
     | FS_INT32 -> Types.Int32
     | FS_UNIT -> Types.Unit
-    | _ -> failwith (sprintf "TinyFS: %s is an unknown type" strType)
+    | FS_SBYTE -> Types.SByte
+    | _ -> tinyfail (sprintf "'%s' is an unknown type" strType)
 
 ///Start converting functions
 let operatorToWasm (op: string) (typ: Types) =
@@ -486,7 +486,11 @@ let rec exprToWasm
             match convertInt value with
             | Some vall -> appendSinList i32_CONST (i32 vall)
             | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to Int32" (value.ToString()))
-        | _ -> failwith (sprintf "TinyFS: Cannot extract value from %s type" (typ.ToString()))
+        | Types.SByte ->
+            match convertSByte value with
+            | Some vall -> appendSinList i32_CONST (i8 vall)
+            | None -> tinyfail (sprintf "Cannot convert '%s' to SByte" (value.ToString()))
+        | _ -> tinyfail (sprintf "Cannot extract value from '%s' type" (typ.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
         let leftWasm = exprToWasm letExpr moduleSymbols functionSymbols
         let rightWasm = exprToWasm rightExpr moduleSymbols functionSymbols

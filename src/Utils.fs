@@ -7,6 +7,11 @@ let convertInt (o: obj) =
     | true, int -> Some int
     | _ -> None
 
+let convertSByte (o: obj) =
+    match System.SByte.TryParse(o.ToString()) with
+    | true, sb -> Some sb
+    | _ -> None
+
 let determineExprPattern (expr) =
     match expr with
     | FSharpExprPatterns.AddressOf (a1) -> "AddressOf"
@@ -58,3 +63,8 @@ let determineExprPattern (expr) =
     | FSharpExprPatterns.WhileLoop (p1) -> "WhileLoop"
     | FSharpExprPatterns.WitnessArg (p1) -> "WitnessArg"
     | _ -> "Unknown"
+
+type TinyFSException(msg: string) =
+    inherit System.Exception(msg)
+
+let tinyfail (msg: string) = raise (new TinyFSException(msg))

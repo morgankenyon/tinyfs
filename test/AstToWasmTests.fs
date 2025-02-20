@@ -1,12 +1,11 @@
 ﻿module TinyFS.Test.WatToWasmTests
 
 open Faqt
-open Faqt.AssertionHelpers
 open Faqt.Operators
 open Helpers
 open TinyFS.Core.AstToWasm
 open TinyFS.Core.FSharpToAst
-open TinyFS.Core.FSharpTypes
+open TinyFS.Core.TypeInfos
 open Xunit
 open FSharp.Compiler.CodeAnalysis
 

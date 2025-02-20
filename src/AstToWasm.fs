@@ -2,241 +2,11 @@
 
 open FSharp.Compiler.Symbols
 open System
-open TinyFS.Core.FSharpTypes
-
-open System.Collections.Generic
+open TinyFS.Core.TypeInfos
+open TinyFS.Core.WasmLiterals.Instructions
+open TinyFS.Core.WasmLiterals.Section
 open Utils
 
-[<Literal>]
-let SECTION_ID_TYPE = 0x1uy
-
-[<Literal>]
-let SECTION_ID_FUNCTION = 0x3uy
-
-[<Literal>]
-let SECTION_ID_EXPORT = 0x7uy
-
-[<Literal>]
-let SECTION_ID_CODE = 0xAuy
-
-
-[<Literal>]
-let INSTR_BLOCK = 0x2uy
-
-[<Literal>]
-let INSTR_LOOP = 0x3uy
-
-
-
-[<Literal>]
-let INSTR_IF = 0x4uy
-
-[<Literal>]
-let INSTR_ELSE = 0x5uy
-
-[<Literal>]
-let INSTR_END = 0xBuy
-
-[<Literal>]
-let INSTR_BR = 0xCuy
-
-[<Literal>]
-let INSTR_BR_IF = 0xDuy
-
-[<Literal>]
-let INSTR_CALL = 0x10uy
-
-[<Literal>]
-let INSTR_DROP = 0x1Auy
-
-[<Literal>]
-let INSTR_LOCAL_GET = 0x20uy
-
-[<Literal>]
-let INSTR_LOCAL_SET = 0x21uy
-
-[<Literal>]
-let INSTR_LOCAL_TEE = 0x22uy
-
-[<Literal>]
-let EMPTY = 0x40uy
-
-[<Literal>]
-let i32_CONST = 0x41uy
-
-[<Literal>]
-let i64_CONST = 0x42uy
-
-[<Literal>]
-let f32_CONST = 0x43uy
-
-[<Literal>]
-let f64_CONST = 0x44uy
-
-[<Literal>]
-let INSTR_i32_EQZ = 0x45uy
-
-[<Literal>]
-let INSTR_i32_EQ = 0x46uy
-
-[<Literal>]
-let INSTR_i32_NE = 0x47uy
-
-[<Literal>]
-let INSTR_i32_LT_S = 0x48uy
-
-[<Literal>]
-let INSTR_i32_LT_U = 0x49uy
-
-[<Literal>]
-let INSTR_i32_GT_S = 0x4Auy
-
-[<Literal>]
-let INSTR_i32_GT_U = 0x4Buy
-
-[<Literal>]
-let INSTR_i32_LE_S = 0x4Cuy
-
-[<Literal>]
-let INSTR_i32_LE_U = 0x4Duy
-
-[<Literal>]
-let INSTR_i32_GE_S = 0x4Euy
-
-[<Literal>]
-let INSTR_i32_GE_U = 0x4Fuy
-
-[<Literal>]
-let INSTR_i64_EQ = 0x51uy
-
-[<Literal>]
-let INSTR_i64_NE = 0x52uy
-
-[<Literal>]
-let INSTR_i64_LT_S = 0x53uy
-
-[<Literal>]
-let INSTR_i64_LT_U = 0x54uy
-
-[<Literal>]
-let INSTR_i64_GT_S = 0x55uy
-
-[<Literal>]
-let INSTR_i64_GT_U = 0x56uy
-
-[<Literal>]
-let INSTR_i64_LE_S = 0x57uy
-
-[<Literal>]
-let INSTR_i64_LE_U = 0x58uy
-
-[<Literal>]
-let INSTR_i64_GE_S = 0x59uy
-
-[<Literal>]
-let INSTR_i64_GE_U = 0x5Auy
-
-[<Literal>]
-let TYPE_FUNCTION = 0x60uy
-
-[<Literal>]
-let INSTR_i32_ADD = 0x6Auy
-
-[<Literal>]
-let INSTR_i32_SUB = 0x6Buy
-
-[<Literal>]
-let INSTR_i32_MUL = 0x6Cuy
-
-[<Literal>]
-let INSTR_i32_DIV_S = 0x6Duy
-
-[<Literal>]
-let INSTR_i32_DIV_U = 0x6Euy
-
-[<Literal>]
-let INSTR_i32_MOD_S = 0x6Fuy
-
-[<Literal>]
-let INSTR_i32_MOD_U = 0x70uy
-
-[<Literal>]
-let INSTR_i64_ADD = 0x7Cuy
-
-[<Literal>]
-let INSTR_i64_SUB = 0x7Duy
-
-[<Literal>]
-let INSTR_i64_MUL = 0x7Euy
-
-[<Literal>]
-let INSTR_i64_DIV_S = 0x7Fuy
-
-[<Literal>]
-let INSTR_i64_DIV_U = 0x80uy
-
-[<Literal>]
-let INSTR_i64_MOD_S = 0x81uy
-
-[<Literal>]
-let INSTR_i64_MOD_U = 0x82uy
-
-[<Literal>]
-let f64_VAL_TYPE = 0x7Cuy
-
-[<Literal>]
-let f32_VAL_TYPE = 0x7Duy
-
-[<Literal>]
-let i64_VAL_TYPE = 0x7Euy
-
-[<Literal>]
-let i32_VAL_TYPE = 0x7Fuy
-
-type FSharpDeclaration = FSharpImplementationFileDeclaration
-
-///Contains the wasm byte representations of a F# function
-type WasmFuncBytes =
-    { name: string
-      paramTypes: byte list
-      resultType: byte
-      localBytes: byte list list
-      body: byte list }
-
-type SymbolType =
-    | Local
-    | Param
-
-type SymbolEntry =
-    { name: string
-      index: int
-      typ: Types
-      isUnit: bool
-      symbolType: SymbolType }
-
-type SymbolDict = Dictionary<string, SymbolEntry>
-
-///Holds references to local params
-type FunctionSymbolDict =
-    { paramSymbols: Dictionary<string, SymbolEntry>
-      localSymbols: Dictionary<string, SymbolEntry> }
-//type LocalSymbolDict = Dictionary<string, SymbolEntry>
-
-///This is designed to hold references to all functions inside
-///a module and those functions local params
-///The int in the value tuple references which numbered function
-///this is in the module because Wasm tracks function by index
-type ModuleSymbolDict = Dictionary<string, FunctionSymbolDict * int>
-
-type SymbolEntries =
-    | Module of ModuleSymbolDict
-    | Function of FunctionSymbolDict
-
-///Tracks all modules symbols, whether top level functions
-///or local parameters
-///First entry in list is always the module level functions
-///Subsequent entries are local params
-type ModuleSymbolList = LinkedList<SymbolEntries>
 
 let stringToBytes (s: string) : byte list =
     System.Text.Encoding.UTF8.GetBytes(s)
@@ -504,11 +274,8 @@ let operatorToWasm (op: string) (typ: Types) =
     //| "or" -> INSTR_i32_OR
     //extra
     | opName, typeName ->
-        failwith (
-            sprintf
-                "TinyFS: We currently do not support the '%s' operator with the '%s' type"
-                opName
-                (typeName.ToString())
+        tinyfail (
+            sprintf "We currently do not support the '%s' operator with the '%s' type" opName (typeName.ToString())
         )
 
 let resolveLocalSymbols (functionSymbols: FunctionSymbolDict) (name: string) =
@@ -521,7 +288,7 @@ let resolveLocalSymbols (functionSymbols: FunctionSymbolDict) (name: string) =
 
         match isParam with
         | true -> functionSymbols.paramSymbols[name]
-        | false -> failwith $"TinyFS: undeclared identifier: {name}"
+        | false -> tinyfail $"undeclared identifier: {name}"
 
 ///Rethink this approach
 let getLocalIndex (functionSymbols: FunctionSymbolDict) (sym: SymbolEntry) =
@@ -536,11 +303,11 @@ let getLocalIndex (functionSymbols: FunctionSymbolDict) (sym: SymbolEntry) =
         nonUnitParamCount + sym.index
 
 let buildDeclError decl =
-    (sprintf "TinyFS: '%s' is currently an unsupported declaration type" (decl.GetType().ToString()))
+    (sprintf "'%s' is currently an unsupported declaration type" (decl.GetType().ToString()))
 
 let buildExprError (expr: FSharpExpr) =
     let exprType = determineExprPattern expr
-    (sprintf "TinyFS: '%s+%s' is currently an unsupported expression type" (expr.GetType().ToString()) exprType)
+    (sprintf "'%s+%s' is currently an unsupported expression type" (expr.GetType().ToString()) exprType)
 
 let private isOperator (memb: FSharpMemberOrFunctionOrValue) =
     match memb.DeclaringEntity with
@@ -570,17 +337,14 @@ let rec exprToWasm
                 let leftWasm = exprToWasm args[0] moduleSymbols functionSymbols
                 let rightWasm = exprToWasm args[1] moduleSymbols functionSymbols
                 aList3 leftWasm rightWasm opWasm
-            | _ ->
-                failwith (
-                    sprintf "TinyFS: Was not expecetd %d argument(s) with '%s' operator" args.Length memb.CompiledName
-                )
+            | _ -> tinyfail (sprintf "Was not expecetd %d argument(s) with '%s' operator" args.Length memb.CompiledName)
         | _ ->
             let index =
                 if moduleSymbols.ContainsKey memb.CompiledName then
                     let (_, idx) = moduleSymbols[memb.CompiledName]
                     idx
                 else
-                    failwith (sprintf "TinyFS: Cannot find function '%s' in FunctionSymbols table" memb.CompiledName)
+                    tinyfail (sprintf "Cannot find function '%s' in FunctionSymbols table" memb.CompiledName)
 
             let argumentBytes =
                 args
@@ -602,7 +366,7 @@ let rec exprToWasm
         | Types.Int32 ->
             match convertInt value with
             | Some vall -> appendSinList i32_CONST (i32 vall)
-            | None -> failwith (sprintf "TinyFS: Cannot convert '%s' to Int32" (value.ToString()))
+            | None -> tinyfail (sprintf "Cannot convert '%s' to Int32" (value.ToString()))
         | Types.SByte ->
             match convertSByte value with
             | Some vall -> appendSinList i32_CONST (i8 vall)
@@ -668,7 +432,7 @@ let rec exprToWasm
 
         let wasmBytes = aList5 loopWasm guardWasm ifWasm bodyWasm brWasm
         wasmBytes
-    | _ -> failwith (buildExprError expr)
+    | _ -> tinyfail (buildExprError expr)
 
 let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBytes list =
     let mutable functionDecls: WasmFuncBytes list = []
@@ -687,7 +451,7 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     if moduleSymbols.ContainsKey name then
                         moduleSymbols[name]
                     else
-                        failwith (sprintf "TinyFS: Cannot find symbolDict for %s" name)
+                        tinyfail (sprintf "Cannot find symbolDict for %s" name)
 
                 let paramWasm =
                     functionSymbols.paramSymbols
@@ -724,9 +488,9 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
 
                 functionDecls
             | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->
-                failwith "TinyFS: Currently do not support module level members"
+                tinyfail "Currently do not support module level members"
             | FSharpDeclaration.Entity (_, decls) -> defineFunctionDecls decls moduleSymbols
-            | _ -> failwith (buildDeclError decl)
+            | _ -> tinyfail (buildDeclError decl)
 
         functionDecls <- appendList functionDecls funcs
 
@@ -772,7 +536,7 @@ let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
 
             match last with
             | Module (mods) -> mods.Add(name, (functionSymbols, mods.Count))
-            | Function _ -> failwith "TinyFS: Should have been Funcion in ConvertingSymbolMap"
+            | Function _ -> tinyfail "Should have been Funcion in ConvertingSymbolMap"
 
             moduleSymbolList.AddLast(Function functionSymbols)
             |> ignore
@@ -795,9 +559,9 @@ let rec convertToModuleSymbolList (moduleSymbolList: ModuleSymbolList) decls =
 
             moduleSymbolList.RemoveLast()
         | FSharpDeclaration.MemberOrFunctionOrValue (_, _, _) ->
-            failwith "TinyFS: Currently do not support module level members"
+            tinyfail "Currently do not support module level members"
         | FSharpDeclaration.Entity (_, decls) -> convertToModuleSymbolList moduleSymbolList decls
-        | _ -> failwith "TinyFS: Unsupported declaration type for symbolmap"
+        | _ -> tinyfail "Unsupported declaration type for symbolmap"
 
     ()
 
@@ -844,7 +608,7 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
 let private getFunctionSymbols (moduleSymbolList: ModuleSymbolList) =
     match moduleSymbolList.First.Value with
     | Module fnSymbols -> fnSymbols
-    | Function _ -> failwith "TinyFS: Should not be locals in AstToWasm.getFunctionSymbols"
+    | Function _ -> tinyfail "Should not be locals in AstToWasm.getFunctionSymbols"
 
 let confirmMainFunction (moduleSymbolList: ModuleSymbolList) =
     let mainName = "main"
@@ -862,10 +626,10 @@ let confirmMainFunction (moduleSymbolList: ModuleSymbolList) =
             if nonUnitParamCount = 0 then
                 moduleSymbolList
             else
-                failwith "TinyFS currently requires a zero parameter 'main' function to exist"
+                tinyfail "TinyFS currently requires a zero parameter 'main' function to exist"
         else
-            failwith "TinyFS requires a zero parameter 'main' function to exist"
-    | Function _ -> failwith "Should not be functions"
+            tinyfail "TinyFS requires a zero parameter 'main' function to exist"
+    | Function _ -> tinyfail "Should not be functions"
 
 let astToWasm (decls: FSharpImplementationFileDeclaration list) =
     buildModuleSymbolList decls

@@ -11,13 +11,6 @@ open FSharp.Compiler.CodeAnalysis
 
 let checker: FSharpChecker = FSharpChecker.Create(keepAssemblyContents = true)
 
-//let getAst declarations = makeCompiler declarations |> generateAst
-
-//let getDeclarations checker (input: string) =
-//    let declarations = Util.getDeclarations checker input
-//    let fableFile = getAst declarations
-//    fableFile.Declarations
-
 let getModuleSymbols (moduleSymbols: ModuleSymbolList) =
     match moduleSymbols.First.Value with
     | Module modd -> modd

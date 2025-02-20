@@ -13,6 +13,9 @@ let FS_INT = "Microsoft.FSharp.Core.int"
 let FS_SBYTE = "Microsoft.FSharp.Core.sbyte"
 
 [<Literal>]
+let FS_INT16 = "Microsoft.FSharp.Core.int16"
+
+[<Literal>]
 let FS_OPERATOR = "Microsoft.FSharp.Core.Operators"
 
 [<Literal>]
@@ -50,6 +53,7 @@ let FS_OP_LESSTHANOREQUAL = "op_LessThanOrEqual"
 
 type Types =
     | SByte
+    | Int16
     | Int32
     | Unit
     | Any

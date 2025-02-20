@@ -85,6 +85,35 @@ let main () = {expr}
     response.Should().Be(expected)
 
 [<Theory>]
+[<InlineData("1s", 1)>]
+[<InlineData("1s + 3s", 4)>]
+[<InlineData("1s + 3s + 2s", 6)>]
+[<InlineData("1s - 3s", -2)>]
+[<InlineData("10s / 2s", 5)>]
+[<InlineData("11s / 2s", 5)>]
+[<InlineData("14s / 5s", 2)>]
+[<InlineData("11s % 2s", 1)>]
+[<InlineData("14s % 5s", 4)>]
+[<InlineData("10s * 15s", 150)>]
+[<InlineData("10s * 15s + 10s", 160)>]
+[<InlineData("10s * (15s + 10s)", 250)>]
+let ``Can compile and run in16 expressions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let main () = {expr}
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)
+
+[<Theory>]
 [<InlineData("1", 1)>]
 [<InlineData("1 + 3", 4)>]
 [<InlineData("1 - 3", -2)>]

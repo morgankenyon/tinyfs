@@ -264,7 +264,8 @@ let i32 (v: int32) : byte list =
 
     r
 
-let i8 (v: sbyte) : byte list = System.Convert.ToInt32(v) |> i32
+let i8 (v: sbyte) = System.Convert.ToInt32(v) |> i32
+let i16 (v: int16) = System.Convert.ToInt32(v) |> i32
 
 ///List helper methods
 let toList ele = [ ele ]
@@ -368,6 +369,7 @@ let getType (strType) =
     | FS_INT32 -> Types.Int32
     | FS_UNIT -> Types.Unit
     | FS_SBYTE -> Types.SByte
+    | FS_INT16 -> Types.Int16
     | _ -> tinyfail (sprintf "'%s' is an unknown type" strType)
 
 ///Start converting functions
@@ -489,6 +491,10 @@ let rec exprToWasm
         | Types.SByte ->
             match convertSByte value with
             | Some vall -> appendSinList i32_CONST (i8 vall)
+            | None -> tinyfail (sprintf "Cannot convert '%s' to SByte" (value.ToString()))
+        | Types.Int16 ->
+            match convertInt16 value with
+            | Some vall -> appendSinList i32_CONST (i16 vall)
             | None -> tinyfail (sprintf "Cannot convert '%s' to SByte" (value.ToString()))
         | _ -> tinyfail (sprintf "Cannot extract value from '%s' type" (typ.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->

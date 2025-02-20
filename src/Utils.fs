@@ -12,6 +12,11 @@ let convertSByte (o: obj) =
     | true, sb -> Some sb
     | _ -> None
 
+let convertInt16 (o: obj) =
+    match System.Int16.TryParse(o.ToString()) with
+    | true, sb -> Some sb
+    | _ -> None
+
 let determineExprPattern (expr) =
     match expr with
     | FSharpExprPatterns.AddressOf (a1) -> "AddressOf"

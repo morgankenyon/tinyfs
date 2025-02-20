@@ -51,7 +51,7 @@ Below lists the following language features that are supported.
 - [ ] `bool`
 - [ ] `byte`
 - [x] `sbyte`
-- [ ] `int16`
+- [x] `int16`
 - [ ] `uint16`
 - [x] `int/int32`
 - [ ] `uint/uint32`

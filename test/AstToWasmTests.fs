@@ -29,7 +29,7 @@ let getModuleSymbols (moduleSymbols: ModuleSymbolList) =
 [<InlineData("10 * 15", 150)>]
 [<InlineData("10 * 15 + 10", 160)>]
 [<InlineData("10 * (15 + 10)", 250)>]
-let ``Can compile and run int32 expressions`` expr expected =
+let ``Can support int32 expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -60,7 +60,7 @@ let main () = 0
 [<InlineData("10y * 15y", 150)>]
 [<InlineData("10y * 15y + 10y", 160)>]
 [<InlineData("10y * (15y + 10y)", 250)>]
-let ``Can compile and run sbyte expressions`` expr expected =
+let ``Can support sbyte expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -89,7 +89,7 @@ let main () = {expr}
 [<InlineData("10s * 15s", 150)>]
 [<InlineData("10s * 15s + 10s", 160)>]
 [<InlineData("10s * (15s + 10s)", 250)>]
-let ``Can compile and run int16 expressions`` expr expected =
+let ``Can support int16 expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -120,7 +120,7 @@ let main () = {expr}
 [<InlineData("10L * 15L", 150L)>]
 [<InlineData("10L * 15L  + 10L", 160L)>]
 [<InlineData("10L * (15L + 10L)", 250L)>]
-let ``Can compile and run int64 expressions`` expr expected =
+let ``Can support int64 expressions`` expr expected =
     let input =
         $"""
 module Test
@@ -577,7 +577,7 @@ let main () = add 3L 6L
 [<InlineData("y >= 3y", 3, 10)>]
 [<InlineData("y >= 3y", -3, -10)>]
 [<InlineData("y >= 3y", 6, 10)>]
-let ``Can compile and run sbyte boolean operator expressions`` expr param expected =
+let ``Can support sbyte boolean operator expressions`` expr param expected =
     let input =
         $"""module Test
 
@@ -617,7 +617,7 @@ let main () = 0
 [<InlineData("y >= 3s", 3, 10)>]
 [<InlineData("y >= 3s", -3, -10)>]
 [<InlineData("y >= 3s", 6, 10)>]
-let ``Can compile and run int16 boolean operator expressions`` expr param expected =
+let ``Can support int16 boolean operator expressions`` expr param expected =
     let input =
         $"""module Test
 
@@ -657,7 +657,7 @@ let main () = 0
 [<InlineData("y >= 3", 3, 10)>]
 [<InlineData("y >= 3", -3, -10)>]
 [<InlineData("y >= 3", 6, 10)>]
-let ``Can compile and run int32 boolean operator expressions`` expr param expected =
+let ``Can support int32 boolean operator expressions`` expr param expected =
     let input =
         $"""module Test
 
@@ -697,7 +697,7 @@ let main () = 0
 [<InlineData("y >= 3L", 3L, 10L)>]
 [<InlineData("y >= 3L", -3L, -10L)>]
 [<InlineData("y >= 3L", 6L, 10L)>]
-let ``Can compile and run int64 boolean operator expressions`` expr param expected =
+let ``Can support int64 boolean operator expressions`` expr param expected =
     let input =
         $"""module Test
 
@@ -825,6 +825,92 @@ let main () =
 
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(10)
+
+[<Theory>]
+[<InlineData("0y", "1y", "n = 0y && m = 1y", 10)>]
+[<InlineData("0y", "1y", "n = 1y && m = 1y", 20)>]
+[<InlineData("0y", "1y", "n = 0y && m = 0y", 20)>]
+[<InlineData("0y", "1y", "n = 1y && m = 0y", 20)>]
+[<InlineData("0y", "1y", "n = 0y || m = 1y", 10)>]
+[<InlineData("0y", "1y", "n = 1y || m = 1y", 10)>]
+[<InlineData("0y", "1y", "n = 0y || m = 0y", 10)>]
+[<InlineData("0y", "1y", "n = 1y || m = 0y", 20)>]
+let ``Can support sbyte boolean expressions`` nValue mValue expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let n: sbyte = {nValue}
+    let m: sbyte = {mValue}
+    if {expr} then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support complicated sbyte boolean expression`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num1: sbyte = 1y
+    let num2: sbyte = 2y
+    let num3: sbyte = 3y
+    let num4: sbyte = 4y
+    let num5: sbyte = 5y
+    let num6: sbyte = 6y
+    if num1 = 1y && num2 = 2y && num3 = 3y && num4 > 2y && (num5 < 10y || num6 <= 6y) then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(10)
+
+[<Theory>]
+[<InlineData("0s", "1s", "n = 0s && m = 1s", 10)>]
+[<InlineData("0s", "1s", "n = 1s && m = 1s", 20)>]
+[<InlineData("0s", "1s", "n = 0s && m = 0s", 20)>]
+[<InlineData("0s", "1s", "n = 1s && m = 0s", 20)>]
+[<InlineData("0s", "1s", "n = 0s || m = 1s", 10)>]
+[<InlineData("0s", "1s", "n = 1s || m = 1s", 10)>]
+[<InlineData("0s", "1s", "n = 0s || m = 0s", 10)>]
+[<InlineData("0s", "1s", "n = 1s || m = 0s", 20)>]
+let ``Can support int16 boolean expressions`` nValue mValue expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let n: int16 = {nValue}
+    let m: int16 = {mValue}
+    if {expr} then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)
 
 [<Theory>]
 [<InlineData(0, 1, "n = 0 && m = 1", 10)>]

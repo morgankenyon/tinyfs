@@ -803,3 +803,85 @@ let main () = 0
 
     let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
     response.Should().Be(63)
+
+[<Fact>]
+let ``Can support boolean expressions`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let n = 0
+    let m = 1
+    if n = 0 then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(10)
+
+[<Theory>]
+[<InlineData(0, 1, "n = 0 && m = 1", 10)>]
+[<InlineData(0, 1, "n = 1 && m = 1", 20)>]
+[<InlineData(0, 1, "n = 0 && m = 0", 20)>]
+[<InlineData(0, 1, "n = 1 && m = 0", 20)>]
+[<InlineData(0, 1, "n = 0 || m = 1", 10)>]
+[<InlineData(0, 1, "n = 1 || m = 1", 10)>]
+[<InlineData(0, 1, "n = 0 || m = 0", 10)>]
+[<InlineData(0, 1, "n = 1 || m = 0", 20)>]
+let ``Can support int32 boolean expressions`` nValue mValue expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let n = {nValue}
+    let m = {mValue}
+    if {expr} then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)
+
+[<Theory>]
+[<InlineData("0L", "1L", "n = 0L && m = 1L", 10L)>]
+[<InlineData("0L", "1L", "n = 1L && m = 1L", 20L)>]
+[<InlineData("0L", "1L", "n = 0L && m = 0L", 20L)>]
+[<InlineData("0L", "1L", "n = 1L && m = 0L", 20L)>]
+[<InlineData("0L", "1L", "n = 0L || m = 1L", 10L)>]
+[<InlineData("0L", "1L", "n = 1L || m = 1L", 10L)>]
+[<InlineData("0L", "1L", "n = 0L || m = 0L", 10L)>]
+[<InlineData("0L", "1L", "n = 1L || m = 0L", 20L)>]
+let ``Can support int64 boolean expressions`` nValue mValue expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let n: int64 = {nValue}
+    let m: int64 = {mValue}
+    if {expr} then
+        10L
+    else
+        20L
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt64Return "main"
+    response.Should().Be(expected)

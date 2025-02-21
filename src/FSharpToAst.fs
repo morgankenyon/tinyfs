@@ -19,12 +19,15 @@ let getDeclarations checker (input: string) =
     let checkProjectResults = parseAndCheckSingleFile checker input
     let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
 
+    let mutable msg = ""
+
     if (checkProjectResults.Diagnostics.Length > 0) then
         let errorWriter = System.Console.Error
 
         for diag in checkProjectResults.Diagnostics do
+            msg <- msg + "\n" + diag.Message
             errorWriter.WriteLine(diag.Message)
 
-        failwith ""
+        failwith msg
     else
         checkedFile.Declarations

@@ -561,6 +561,86 @@ let main () = add 3L 6L
     response.Should().Be(12)
 
 [<Theory>]
+[<InlineData("y > 0y", 3, 10)>]
+[<InlineData("y > 0y", -3, -10)>]
+[<InlineData("y < 0y", 3, -10)>]
+[<InlineData("y < 0y", -3, 10)>]
+[<InlineData("y = 3y", 3, 10)>]
+[<InlineData("y = 3y", -3, -10)>]
+[<InlineData("y = 3y", 6, -10)>]
+[<InlineData("y <> 3y", 3, -10)>]
+[<InlineData("y <> 3y", -3, 10)>]
+[<InlineData("y <> 3y", 6, 10)>]
+[<InlineData("y <= 3y", 3, 10)>]
+[<InlineData("y <= 3y", -3, 10)>]
+[<InlineData("y <= 3y", 6, -10)>]
+[<InlineData("y >= 3y", 3, 10)>]
+[<InlineData("y >= 3y", -3, -10)>]
+[<InlineData("y >= 3y", 6, 10)>]
+let ``Can compile and run sbyte boolean operator expressions`` expr param expected =
+    let input =
+        $"""module Test
+
+let x (y: sbyte) =
+    let z =
+        if {expr} then
+            10
+        else
+            -10
+    z
+
+let main () = 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "x" param
+    response.Should().Be(expected)
+
+[<Theory>]
+[<InlineData("y > 0s", 3, 10)>]
+[<InlineData("y > 0s", -3, -10)>]
+[<InlineData("y < 0s", 3, -10)>]
+[<InlineData("y < 0s", -3, 10)>]
+[<InlineData("y = 3s", 3, 10)>]
+[<InlineData("y = 3s", -3, -10)>]
+[<InlineData("y = 3s", 6, -10)>]
+[<InlineData("y <> 3s", 3, -10)>]
+[<InlineData("y <> 3s", -3, 10)>]
+[<InlineData("y <> 3s", 6, 10)>]
+[<InlineData("y <= 3s", 3, 10)>]
+[<InlineData("y <= 3s", -3, 10)>]
+[<InlineData("y <= 3s", 6, -10)>]
+[<InlineData("y >= 3s", 3, 10)>]
+[<InlineData("y >= 3s", -3, -10)>]
+[<InlineData("y >= 3s", 6, 10)>]
+let ``Can compile and run int16 boolean operator expressions`` expr param expected =
+    let input =
+        $"""module Test
+
+let x (y: int16) =
+    let z =
+        if {expr} then
+            10
+        else
+            -10
+    z
+
+let main () = 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runInt32FuncInt32 "x" param
+    response.Should().Be(expected)
+
+[<Theory>]
 [<InlineData("y > 0", 3, 10)>]
 [<InlineData("y > 0", -3, -10)>]
 [<InlineData("y < 0", 3, -10)>]
@@ -577,7 +657,7 @@ let main () = add 3L 6L
 [<InlineData("y >= 3", 3, 10)>]
 [<InlineData("y >= 3", -3, -10)>]
 [<InlineData("y >= 3", 6, 10)>]
-let ``Can support boolean operator expressions`` expr param expected =
+let ``Can compile and run int32 boolean operator expressions`` expr param expected =
     let input =
         $"""module Test
 
@@ -600,8 +680,48 @@ let main () = 0
     let response = wasmBytes |> runInt32FuncInt32 "x" param
     response.Should().Be(expected)
 
+[<Theory>]
+[<InlineData("y > 0L", 3L, 10L)>]
+[<InlineData("y > 0L", -3L, -10L)>]
+[<InlineData("y < 0L", 3L, -10L)>]
+[<InlineData("y < 0L", -3L, 10L)>]
+[<InlineData("y = 3L", 3L, 10L)>]
+[<InlineData("y = 3L", -3L, -10L)>]
+[<InlineData("y = 3L", 6L, -10L)>]
+[<InlineData("y <> 3L", 3L, -10L)>]
+[<InlineData("y <> 3L", -3L, 10L)>]
+[<InlineData("y <> 3L", 6L, 10L)>]
+[<InlineData("y <= 3L", 3L, 10L)>]
+[<InlineData("y <= 3L", -3L, 10L)>]
+[<InlineData("y <= 3L", 6L, -10L)>]
+[<InlineData("y >= 3L", 3L, 10L)>]
+[<InlineData("y >= 3L", -3L, -10L)>]
+[<InlineData("y >= 3L", 6L, 10L)>]
+let ``Can compile and run int64 boolean operator expressions`` expr param expected =
+    let input =
+        $"""module Test
+
+let x (y: int64) =
+    let z =
+        if {expr} then
+            10L
+        else
+            -10L
+    z
+
+let main () = 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runInt64FuncInt64 "x" param
+    response.Should().Be(expected)
+
 [<Fact>]
-let ``Can support invalid F# syntax throw an error`` () =
+let ``Can throw an error when invalid F# syntax`` () =
     let input =
         $"""module Test
 

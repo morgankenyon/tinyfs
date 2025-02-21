@@ -84,13 +84,16 @@ type blockType =
     | F32
     | F64
 
-let getBlockType bType =
-    match bType with
-    | Empty_ -> EMPTY
-    | I32 -> i32_VAL_TYPE
-    | I64 -> i64_VAL_TYPE
-    | F32 -> f32_VAL_TYPE
-    | F64 -> f64_VAL_TYPE
+let getBlockType (typ: Types option) =
+    match typ with
+    | None -> EMPTY
+    | Some vall ->
+        match vall with
+        | Int32 -> i32_VAL_TYPE
+        | Int64 -> i64_VAL_TYPE
+        //| F32 -> f32_VAL_TYPE
+        //| F64 -> f64_VAL_TYPE
+        | _ -> tinyfail (sprintf "Currently do not support a '%s' block type" (vall.ToString()))
 
 let getResultType typ =
     match typ with
@@ -119,6 +122,15 @@ let getOperatorType typ =
     | Types.Int32 -> Types.Int32
     | Types.Int64 -> Types.Int64
     | _ -> tinyfail (sprintf "Currently does not support '%s' operator type" (typ.ToString()))
+
+let getOperatorTypeFromArgs (arg1: FSharpExpr) (arg2: FSharpExpr) =
+    let arg1Type = getType arg1.Type.BasicQualifiedName
+    let arg2Type = getType arg2.Type.BasicQualifiedName
+
+    if arg1Type = arg2Type then
+        getOperatorType arg1Type
+    else
+        tinyfail (sprintf "Cannot deduce operator for '%s' and '%s' types" (arg1Type.ToString()) (arg2Type.ToString()))
 
 ///Start converting functions
 let operatorToWasm (op: string) (typ: Types) =
@@ -199,22 +211,23 @@ let rec exprToWasm
     (expr: FSharpExpr)
     (moduleSymbols: ModuleSymbolDict)
     (functionSymbols: FunctionSymbolDict)
-    : byte list =
+    : Types * (byte list) =
     match expr with
     | FSharpExprPatterns.Call (callExpr, memb, ownerGenArgs, memberGenArgs, args) ->
         match isOperator memb with
         | true, opName ->
             match args.Length with
             | 2 ->
-                let exprType =
-                    getType expr.Type.BasicQualifiedName
-                    |> getOperatorType
+                let exprType = getOperatorTypeFromArgs args[0] args[1]
+                //getType expr.Type.BasicQualifiedName
+                //|> getOperatorType
 
                 let opWasm = operatorToWasm opName exprType |> toList
 
-                let leftWasm = exprToWasm args[0] moduleSymbols functionSymbols
-                let rightWasm = exprToWasm args[1] moduleSymbols functionSymbols
-                aList3 leftWasm rightWasm opWasm
+                let (_, leftWasm) = exprToWasm args[0] moduleSymbols functionSymbols
+                let (_, rightWasm) = exprToWasm args[1] moduleSymbols functionSymbols
+
+                (exprType, (aList3 leftWasm rightWasm opWasm))
             | _ -> tinyfail (sprintf "Was not expecetd %d argument(s) with '%s' operator" args.Length memb.CompiledName)
         | _ ->
             let index =
@@ -224,92 +237,97 @@ let rec exprToWasm
                 else
                     tinyfail (sprintf "Cannot find function '%s' in FunctionSymbols table" memb.CompiledName)
 
-            let argumentBytes =
+            let argumentWasm =
                 args
                 |> List.filter (fun arg ->
                     (getType arg.Type.BasicQualifiedName)
                     <> Types.Unit)
                 |> List.map (fun arg -> exprToWasm arg moduleSymbols functionSymbols)
+                |> List.map (fun (typ, bytes) -> bytes)
                 |> List.collect id
 
             let callWasm = appendSinList INSTR_CALL (i32 index)
 
-            let wasmBytes = aList2 argumentBytes callWasm
+            let functionCallWasm = aList2 argumentWasm callWasm
 
-            wasmBytes
+            //TODO - returning this as a Unit might be a bug
+            (Types.Unit, functionCallWasm)
     | FSharpExprPatterns.Const (value, typ) ->
         let typ = getType typ.BasicQualifiedName
 
         match typ with
-        | Types.Int32 ->
-            match convertInt value with
-            | Some vall -> appendSinList i32_CONST (i32 vall)
-            | None -> tinyfail (sprintf "Cannot convert '%s' to Int32" (value.ToString()))
         | Types.SByte ->
             match convertSByte value with
-            | Some vall -> appendSinList i32_CONST (i8 vall)
+            | Some vall -> (Types.Int32, (appendSinList i32_CONST (i8 vall)))
             | None -> tinyfail (sprintf "Cannot convert '%s' to SByte" (value.ToString()))
         | Types.Int16 ->
             match convertInt16 value with
-            | Some vall -> appendSinList i32_CONST (i16 vall)
+            | Some vall -> (Types.Int32, (appendSinList i32_CONST (i16 vall)))
             | None -> tinyfail (sprintf "Cannot convert '%s' to Int16" (value.ToString()))
+        | Types.Int32 ->
+            match convertInt value with
+            | Some vall -> (Types.Int32, (appendSinList i32_CONST (i32 vall)))
+            | None -> tinyfail (sprintf "Cannot convert '%s' to Int32" (value.ToString()))
         | Types.Int64 ->
             match convertInt64 value with
-            | Some vall -> appendSinList i64_CONST (i64 vall)
+            | Some vall -> (Types.Int64, (appendSinList i64_CONST (i64 vall)))
             | None -> tinyfail (sprintf "Cannot convert '%s' to Int64" (value.ToString()))
         | _ -> tinyfail (sprintf "Cannot extract value from '%s' type" (typ.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
-        let leftWasm = exprToWasm letExpr moduleSymbols functionSymbols
-        let rightWasm = exprToWasm rightExpr moduleSymbols functionSymbols
+        let (_, leftWasm) = exprToWasm letExpr moduleSymbols functionSymbols
+        let (_, rightWasm) = exprToWasm rightExpr moduleSymbols functionSymbols
 
-        let localIndex =
-            resolveLocalSymbols functionSymbols vall.CompiledName
-            |> getLocalIndex functionSymbols
+        let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
+
+        let localIndex = getLocalIndex functionSymbols localSymbol
 
         let localWasm = appendSinList INSTR_LOCAL_SET (i32 localIndex)
 
-        aList3 leftWasm localWasm rightWasm
+        (localSymbol.typ, (aList3 leftWasm localWasm rightWasm))
     | FSharpExprPatterns.Value (vall) ->
-        let localIndex =
-            resolveLocalSymbols functionSymbols vall.CompiledName
-            |> getLocalIndex functionSymbols
+        let localSymbol = resolveLocalSymbols functionSymbols vall.CompiledName
 
-        appendSinList INSTR_LOCAL_GET (i32 localIndex)
+        let localIndex = getLocalIndex functionSymbols localSymbol
+
+        (localSymbol.typ, (appendSinList INSTR_LOCAL_GET (i32 localIndex)))
     | FSharpExprPatterns.IfThenElse (guardExpr, thenExpr, elseExpr) ->
-        let guardWasm = exprToWasm guardExpr moduleSymbols functionSymbols
-        let ifCommandWasm = [ INSTR_IF; getBlockType I32 ]
-        let thenWasm = exprToWasm thenExpr moduleSymbols functionSymbols
+        let (guardTyp, guardWasm) = exprToWasm guardExpr moduleSymbols functionSymbols
+
+        let ifCommandWasm =
+            [ INSTR_IF
+              getBlockType (Some guardTyp) ]
+
+        let (_, thenWasm) = exprToWasm thenExpr moduleSymbols functionSymbols
         let elseCommandWasm = [ INSTR_ELSE ]
-        let elseWasm = exprToWasm elseExpr moduleSymbols functionSymbols
+        let (_, elseWasm) = exprToWasm elseExpr moduleSymbols functionSymbols
         let endingWasm = [ INSTR_END ]
 
         let wasmBytes =
             aList6 guardWasm ifCommandWasm thenWasm elseCommandWasm elseWasm endingWasm
 
-        wasmBytes
+        (guardTyp, wasmBytes)
     | FSharpExprPatterns.Sequential (first, second) ->
-        let firstWasm = exprToWasm first moduleSymbols functionSymbols
-        let secondWasm = exprToWasm second moduleSymbols functionSymbols
-        aList2 firstWasm secondWasm
+        let (firstTyp, firstWasm) = exprToWasm first moduleSymbols functionSymbols
+        let (secondTyp, secondWasm) = exprToWasm second moduleSymbols functionSymbols
+        (firstTyp, (aList2 firstWasm secondWasm))
     | FSharpExprPatterns.ValueSet (valToSet, valueExpr) ->
-        let symbolIndex =
-            resolveLocalSymbols functionSymbols valToSet.CompiledName
-            |> getLocalIndex functionSymbols
+        let localSymbol = resolveLocalSymbols functionSymbols valToSet.CompiledName
+        let localIndex = getLocalIndex functionSymbols localSymbol
 
-        let exprWasm = exprToWasm valueExpr moduleSymbols functionSymbols
+        let (exprTyp, exprWasm) = exprToWasm valueExpr moduleSymbols functionSymbols
 
-        let setWasm = aList3 [ INSTR_LOCAL_TEE ] (i32 symbolIndex) [ INSTR_DROP ]
+        let setWasm = aList3 [ INSTR_LOCAL_TEE ] (i32 localIndex) [ INSTR_DROP ]
 
-        aList2 exprWasm setWasm
+        (localSymbol.typ, (aList2 exprWasm setWasm))
     | FSharpExprPatterns.WhileLoop (guardExpr, bodyExpr, _) ->
-        let loopWasm = [ INSTR_LOOP; (getBlockType Empty_) ]
-        let guardWasm = exprToWasm guardExpr moduleSymbols functionSymbols
-        let ifWasm = [ INSTR_IF; (getBlockType Empty_) ]
-        let bodyWasm = exprToWasm bodyExpr moduleSymbols functionSymbols
+        let loopWasm = [ INSTR_LOOP; (getBlockType None) ]
+        let (guardTyp, guardWasm) = exprToWasm guardExpr moduleSymbols functionSymbols
+        let ifWasm = [ INSTR_IF; (getBlockType None) ]
+        let (bodyTyp, bodyWasm) = exprToWasm bodyExpr moduleSymbols functionSymbols
         let brWasm = aList3 [ INSTR_BR ] (i32 1) [ INSTR_END; INSTR_END ]
 
         let wasmBytes = aList5 loopWasm guardWasm ifWasm bodyWasm brWasm
-        wasmBytes
+        (bodyTyp, wasmBytes)
     | _ -> tinyfail (buildExprError expr)
 
 let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBytes list =
@@ -349,7 +367,7 @@ let rec defineFunctionDecls decls (moduleSymbols: ModuleSymbolDict) : WasmFuncBy
                     |> Seq.map (fun sym -> [ locals 1 (getResultType sym.typ) ])
                     |> List.concat
 
-                let bodyWasm = exprToWasm body moduleSymbols functionSymbols
+                let (bodyTyp, bodyWasm) = exprToWasm body moduleSymbols functionSymbols
 
                 let resultType =
                     body.Type.BasicQualifiedName

@@ -184,3 +184,15 @@ module Instructions =
 
     [<Literal>]
     let INSTR_i64_MOD_U = 0x82uy
+
+    [<Literal>]
+    let INSTR_f64_ADD = 0xA0uy
+
+    [<Literal>]
+    let INSTR_f64_SUB = 0xA1uy
+
+    [<Literal>]
+    let INSTR_f64_MUL = 0xA2uy
+
+    [<Literal>]
+    let INSTR_f64_DIV = 0xA3uy

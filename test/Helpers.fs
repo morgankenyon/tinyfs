@@ -28,6 +28,12 @@ let runFuncInt32Return (funcName: string) (wasmBytes: byte list) =
     let func = instance.GetFunction<int32>(funcName)
     func.Invoke()
 
+let runFuncFloat64Return (funcName: string) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let func = instance.GetFunction<float>(funcName)
+    func.Invoke()
+
 let runFuncInt64Return (funcName: string) (wasmBytes: byte list) =
     let instance = buildInstance wasmBytes
 

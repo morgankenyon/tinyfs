@@ -1159,3 +1159,50 @@ let main () =
 
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support float64 type`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num = 3.14
+    num
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat64Return "main"
+    response.Should().Be(3.14)
+
+[<Theory>]
+[<InlineData("1.0", 1.0)>]
+[<InlineData("1.0 + 3.0", 4.0)>]
+[<InlineData("1.0 + 3.0 + 2.0", 6.0)>]
+[<InlineData("1.0 - 3.0", -2.0)>]
+[<InlineData("10.0 / 2.0", 5.0)>]
+[<InlineData("11.0 / 2.0", 5.5)>]
+[<InlineData("14.0 / 5.0", 2.8)>]
+//[<InlineData("11.0 % 2.0", 1.0)>]
+//[<InlineData("14.0 % 5.0", 4.0)>]
+[<InlineData("10.0 * 15.0", 150.0)>]
+[<InlineData("10.0 * 15.0 + 10.0", 160.0)>]
+[<InlineData("10.0 * (15.0 + 10.0)", 250.0)>]
+let ``Can support float64 expressions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let main () = {expr}
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat64Return "main"
+    response.Should().Be(expected)

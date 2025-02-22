@@ -378,7 +378,7 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(40)
@@ -403,7 +403,7 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(160)
@@ -851,7 +851,7 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
@@ -877,7 +877,7 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(10)
@@ -907,10 +907,36 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support complicated int16 boolean expression`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num1 = 1s
+    let num2 = 2s
+    let num3 = 3s
+    let num4 = 4s
+    let num5 = 5s
+    let num6 = 6s
+    if num1 = 1s && num2 = 2s && num3 = 3s && num4 > 2s && (num5 < 10s || num6 <= 6s) then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(10)
 
 [<Theory>]
 [<InlineData(0, 1, "n = 0 && m = 1", 10)>]
@@ -942,6 +968,32 @@ let main () =
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
 
+[<Fact>]
+let ``Can support complicated int32 boolean expression`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num1 = 1
+    let num2 = 2
+    let num3 = 3
+    let num4 = 4
+    let num5 = 5
+    let num6 = 6
+    if num1 = 1 && num2 = 2 && num3 = 3 && num4 > 2 && (num5 < 10 || num6 <= 6) then
+        10
+    else
+        20
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(10)
+
 [<Theory>]
 [<InlineData("0L", "1L", "n = 0L && m = 1L", 10L)>]
 [<InlineData("0L", "1L", "n = 1L && m = 1L", 20L)>]
@@ -967,7 +1019,33 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support complicated int64 boolean expression`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num1 = 1L
+    let num2 = 2L
+    let num3 = 3L
+    let num4 = 4L
+    let num5 = 5L
+    let num6 = 6L
+    if num1 = 1L && num2 = 2L && num3 = 3L && num4 > 2L && (num5 < 10L || num6 <= 6L) then
+        10L
+    else
+        20L
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt64Return "main"
+    response.Should().Be(10L)

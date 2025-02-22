@@ -67,7 +67,7 @@ Below lists the following language features that are supported.
 - [ ] `unit`
 
 * The next values to be supported will be:
-  * `int64`, `float32`, `float64` and `bool`
+  * `float32`, `float64` and `bool`
   * WebAssembly provides builtin support for `int32`, `int64`, `float32` and `float64`. Everything else comes extra.
 
 
@@ -104,6 +104,8 @@ __Arithmetic Operators__
 - [x] `%`
 - [ ] `**`
 
+> For currently supported primitive types
+
 __Comparison Operators__
 
 - [x] `=`
@@ -113,9 +115,13 @@ __Comparison Operators__
 - [x] `>`
 - [x] `>=`
 
+> For currently supported primitive types
+
 __Boolean Operators__
-- [ ] `&&`
-- [ ] `||`
+- [x] `&&`
+- [x] `||`
+
+> For currently supported primitive types
 
 __Bitwise Operators__
 

@@ -1049,3 +1049,113 @@ let main () =
 
     let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(10L)
+
+[<Fact>]
+let ``Can support boolean types`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let bl = true
+    if bl then 10 else 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(10)
+
+[<Fact>]
+let ``Can support boolean in if statment`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let bl = true
+    if bl && false then 10 else 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(0)
+
+[<Theory>]
+[<InlineData("true", "true", "bl1 && bl2", 10)>]
+[<InlineData("false", "true", "bl1 && bl2", 0)>]
+[<InlineData("true", "false", "bl1 && bl2", 0)>]
+[<InlineData("false", "false", "bl1 && bl2", 0)>]
+[<InlineData("true", "true", "bl1 || bl2", 10)>]
+[<InlineData("false", "true", "bl1 || bl2", 10)>]
+[<InlineData("true", "false", "bl1 || bl2", 10)>]
+[<InlineData("false", "false", "bl1 || bl2", 0)>]
+[<InlineData("true", "true", "(bl1 || bl2) || (bl1 && bl2)", 10)>]
+[<InlineData("true", "false", "(bl1 || bl2) || (bl1 && bl2)", 10)>]
+[<InlineData("false", "true", "(bl1 || bl2) || (bl1 && bl2)", 10)>]
+[<InlineData("false", "false", "(bl1 || bl2) || (bl1 && bl2)", 0)>]
+[<InlineData("true", "true", "(bl1 || bl2) && (bl1 && bl2)", 10)>]
+[<InlineData("true", "false", "(bl1 || bl2) && (bl1 && bl2)", 0)>]
+[<InlineData("false", "true", "(bl1 || bl2) && (bl1 && bl2)", 0)>]
+[<InlineData("false", "false", "(bl1 || bl2) && (bl1 && bl2)", 0)>]
+let ``Can support complicated bool expressions`` bl1 bl2 expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let bl1 = {bl1}
+    let bl2 = {bl2}
+    if {expr} then 10 else 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)
+
+[<Theory>]
+[<InlineData("true", "10", "bl1 && bl2 > 0", 10)>]
+[<InlineData("false", "10", "bl1 && bl2 > 0", 0)>]
+[<InlineData("true", "-10", "bl1 && bl2 > 0", 0)>]
+[<InlineData("false", "-10", "bl1 && bl2 > 0", 0)>]
+[<InlineData("true", "10L", "bl1 && bl2 > 0L", 10)>]
+[<InlineData("false", "10L", "bl1 && bl2 > 0L", 0)>]
+[<InlineData("true", "-10L", "bl1 && bl2 > 0L", 0)>]
+[<InlineData("false", "-10L", "bl1 && bl2 > 0L", 0)>]
+[<InlineData("true", "10", "bl1 || bl2 > 0", 10)>]
+[<InlineData("false", "10", "bl1 || bl2 > 0", 10)>]
+[<InlineData("true", "-10", "bl1 || bl2 > 0", 10)>]
+[<InlineData("false", "-10", "bl1 || bl2 > 0", 0)>]
+[<InlineData("true", "10L", "bl1 || bl2 > 0L", 10)>]
+[<InlineData("false", "10L", "bl1 || bl2 > 0L", 10)>]
+[<InlineData("true", "-10L", "bl1 || bl2 > 0L", 10)>]
+[<InlineData("false", "-10L", "bl1 || bl2 > 0L", 0)>]
+[<InlineData("true", "10", "(bl1 || bl2 > 0) || (bl1 && bl2 > 20)", 10)>]
+[<InlineData("true", "10", "(bl1 || bl2 > 0) && (bl1 && bl2 > 20)", 0)>]
+[<InlineData("true", "10L", "(bl1 || bl2 > 0L) || (bl1 && bl2 > 20L)", 10)>]
+[<InlineData("true", "10L", "(bl1 || bl2 > 0L) && (bl1 && bl2 > 20L)", 0)>]
+let ``Can support mixed bool expressions`` bl1 bl2 expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let bl1 = {bl1}
+    let bl2 = {bl2}
+    if {expr} then 10 else 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(expected)

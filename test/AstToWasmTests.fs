@@ -1068,6 +1068,24 @@ let main () =
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(10)
 
+[<Fact>]
+let ``Can support boolean in if statment`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let bl = true
+    if bl && false then 10 else 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(0)
+
 [<Theory>]
 [<InlineData("true", "true", "bl1 && bl2", 10)>]
 [<InlineData("false", "true", "bl1 && bl2", 0)>]
@@ -1098,7 +1116,7 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(expected)
@@ -1137,25 +1155,7 @@ let main () =
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
-
-    let response = wasmBytes |> runFuncInt32Return "main"
-    response.Should().Be(expected)
-
-[<Fact>]
-let ``Can debug support boolean types`` () =
-    let input =
-        $"""module Test
-
-let main () =
-    let bl = 2
-    if bl > 0 then 10 else 0
-"""
-
-    let declarations = getDeclarations checker input
-    let wasmBytes = astToWasm declarations
-
     //printWasm wasmBytes
 
     let response = wasmBytes |> runFuncInt32Return "main"
-    response.Should().Be(10)
+    response.Should().Be(expected)

@@ -6,7 +6,7 @@ let printWasm (bytes: byte list) =
     let stringRepresentation =
         bytes
         |> List.map (fun by -> by.ToString())
-        |> String.concat ""
+        |> String.concat "\n"
     //let str = stringRepresentation |> String.concat ""
     System.IO.File.WriteAllText("./atest.txt", stringRepresentation)
     System.IO.File.WriteAllBytes("./atest.wasm", List.toArray bytes)

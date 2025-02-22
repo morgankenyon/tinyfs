@@ -207,6 +207,47 @@ let private isOperator (memb: FSharpMemberOrFunctionOrValue) =
         | _ -> (false, "")
     | _ -> (false, "")
 
+let normalizeWasmToType (typ: Types) (wasm: byte list) =
+    match typ, wasm.Length with
+    | Types.SByte, 1
+    | Types.Int16, 1
+    | Types.Int32, 1 ->
+        let intVal = if wasm[0] = 0uy then 0 else 1
+        appendSinList i32_CONST (i32 intVal)
+    | Types.Int64, 1 ->
+        let intVal = if wasm[0] = 0uy then 0L else 1L
+        appendSinList i64_CONST (i64 intVal)
+    | _, _ -> tinyfail (sprintf "Do not know how to normalize type of '%s'" (typ.ToString()))
+
+///Turns out that the F# AST does not convert boolean operators
+///to function calls. So instead of '&&' or '||' call some function
+///to calculate a value, it's encoded in the AST itself.
+///ie: `if (n = 0 && n = 0) then`, the F# AST has a nested IfThen structure
+///with an orphan bool type. In order to tell what type that bool should
+///be (int32/int64), This function normalizes the orphan bool branch with
+///the same type as the non-orphan branch
+let private normalizeBranchReturns (thenType: Types) (thenWasm: byte list) (elseType: Types) (elseWasm: byte list) =
+    if thenType = elseType then
+        (thenWasm, elseWasm)
+    else if thenType = Types.Bool then
+        let wasm = normalizeWasmToType elseType thenWasm
+        (wasm, elseWasm)
+    else
+        let wasm = normalizeWasmToType thenType elseWasm
+        (thenWasm, wasm)
+
+///The fact that a i64 operator returns an i32 means we can't always rely
+///on the argument types to know what the return type is. We can't always
+///default to i32, since sometimes we need an i64, and vice versa.
+///So this logic helps us determine which type we really need to return
+let private normalizeTypeReturn (guardType: Types) (thenType: Types) (elseType: Types) =
+    if thenType = Types.Bool || elseType = Types.Bool then
+        guardType
+    elif thenType <> elseType then
+        guardType
+    else
+        thenType
+
 let rec exprToWasm
     (expr: FSharpExpr)
     (moduleSymbols: ModuleSymbolDict)
@@ -227,7 +268,7 @@ let rec exprToWasm
                 let (_, leftWasm) = exprToWasm args[0] moduleSymbols functionSymbols
                 let (_, rightWasm) = exprToWasm args[1] moduleSymbols functionSymbols
 
-                (exprType, (aList3 leftWasm rightWasm opWasm))
+                (Types.Int32, (aList3 leftWasm rightWasm opWasm))
             | _ -> tinyfail (sprintf "Was not expecetd %d argument(s) with '%s' operator" args.Length memb.CompiledName)
         | _ ->
             let index =
@@ -272,6 +313,12 @@ let rec exprToWasm
             match convertInt64 value with
             | Some vall -> (Types.Int64, (appendSinList i64_CONST (i64 vall)))
             | None -> tinyfail (sprintf "Cannot convert '%s' to Int64" (value.ToString()))
+        | Types.Bool ->
+            match convertBool value with
+            | Some vall ->
+                let vallByte = if vall then 1uy else 0uy
+                (Types.Bool, [ vallByte ])
+            | None -> tinyfail (sprintf "Cannot convert '%s' to Bool" (value.ToString()))
         | _ -> tinyfail (sprintf "Cannot extract value from '%s' type" (typ.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->
         let (_, leftWasm) = exprToWasm letExpr moduleSymbols functionSymbols
@@ -293,19 +340,25 @@ let rec exprToWasm
     | FSharpExprPatterns.IfThenElse (guardExpr, thenExpr, elseExpr) ->
         let (guardTyp, guardWasm) = exprToWasm guardExpr moduleSymbols functionSymbols
 
+        let (thenTyp, thenTempWasm) = exprToWasm thenExpr moduleSymbols functionSymbols
+        let elseCommandWasm = [ INSTR_ELSE ]
+        let (elseTyp, elseTempWasm) = exprToWasm elseExpr moduleSymbols functionSymbols
+
+        let (thenWasm, elseWasm) =
+            normalizeBranchReturns thenTyp thenTempWasm elseTyp elseTempWasm
+
+        let endingWasm = [ INSTR_END ]
+
+        let returnType = normalizeTypeReturn guardTyp thenTyp elseTyp
+
         let ifCommandWasm =
             [ INSTR_IF
-              getBlockType (Some guardTyp) ]
-
-        let (_, thenWasm) = exprToWasm thenExpr moduleSymbols functionSymbols
-        let elseCommandWasm = [ INSTR_ELSE ]
-        let (_, elseWasm) = exprToWasm elseExpr moduleSymbols functionSymbols
-        let endingWasm = [ INSTR_END ]
+              getBlockType (Some returnType) ]
 
         let wasmBytes =
             aList6 guardWasm ifCommandWasm thenWasm elseCommandWasm elseWasm endingWasm
 
-        (guardTyp, wasmBytes)
+        (returnType, wasmBytes)
     | FSharpExprPatterns.Sequential (first, second) ->
         let (firstTyp, firstWasm) = exprToWasm first moduleSymbols functionSymbols
         let (secondTyp, secondWasm) = exprToWasm second moduleSymbols functionSymbols

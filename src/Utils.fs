@@ -41,6 +41,11 @@ let convertInt64 (o: obj) =
     | true, int -> Some int
     | _ -> None
 
+let convertBool (o: obj) =
+    match System.Boolean.TryParse(o.ToString()) with
+    | true, bol -> Some bol
+    | _ -> None
+
 let determineExprPattern (expr) =
     match expr with
     | FSharpExprPatterns.AddressOf (a1) -> "AddressOf"

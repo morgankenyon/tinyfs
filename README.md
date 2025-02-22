@@ -48,7 +48,7 @@ Below lists the following language features that are supported.
 
 > https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/basic-types
 
-- [ ] `bool`
+- [x] `bool` - by converting to WebAssembly's `i32`
 - [ ] `byte`
 - [x] `sbyte` - by up converting to WebAssembly's `i32`
 - [x] `int16` - by up converting to WebAssembly's `i32`

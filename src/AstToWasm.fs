@@ -89,6 +89,7 @@ let getBlockType (typ: Types option) =
     | None -> EMPTY
     | Some vall ->
         match vall with
+        | Bool
         | Int32 -> i32_VAL_TYPE
         | Int64 -> i64_VAL_TYPE
         //| F32 -> f32_VAL_TYPE
@@ -97,6 +98,7 @@ let getBlockType (typ: Types option) =
 
 let getResultType typ =
     match typ with
+    | Types.Bool
     | Types.SByte
     | Types.Int16
     | Types.Int32 -> i32_VAL_TYPE
@@ -207,6 +209,10 @@ let private isOperator (memb: FSharpMemberOrFunctionOrValue) =
         | _ -> (false, "")
     | _ -> (false, "")
 
+//I first wrote this when supporting boolean expressions.
+//I needed a way to convert from bool -> i32/i64 when comparing
+//a more complicated boolean expression (1 > 2 && num1). Now that
+//I support proper boolean types, this might not be needed anymore.
 let normalizeWasmToType (typ: Types) (wasm: byte list) =
     match typ, wasm.Length with
     | Types.SByte, 1
@@ -214,10 +220,12 @@ let normalizeWasmToType (typ: Types) (wasm: byte list) =
     | Types.Int32, 1 ->
         let intVal = if wasm[0] = 0uy then 0 else 1
         appendSinList i32_CONST (i32 intVal)
+    | Types.Int32, 2 -> wasm
     | Types.Int64, 1 ->
         let intVal = if wasm[0] = 0uy then 0L else 1L
         appendSinList i64_CONST (i64 intVal)
-    | _, _ -> tinyfail (sprintf "Do not know how to normalize type of '%s'" (typ.ToString()))
+    | _, _ ->
+        tinyfail (sprintf "Do not know how to normalize type of '%s' with length '%d'" (typ.ToString()) wasm.Length)
 
 ///Turns out that the F# AST does not convert boolean operators
 ///to function calls. So instead of '&&' or '||' call some function
@@ -317,7 +325,7 @@ let rec exprToWasm
             match convertBool value with
             | Some vall ->
                 let vallByte = if vall then 1uy else 0uy
-                (Types.Bool, [ vallByte ])
+                (Types.Bool, (appendSinList i32_CONST [ vallByte ]))
             | None -> tinyfail (sprintf "Cannot convert '%s' to Bool" (value.ToString()))
         | _ -> tinyfail (sprintf "Cannot extract value from '%s' type" (typ.ToString()))
     | FSharpExprPatterns.Let ((vall, letExpr, _), rightExpr) ->

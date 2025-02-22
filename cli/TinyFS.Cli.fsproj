@@ -8,7 +8,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>TinyFS.Cli</PackageId>
     <Title>TinyFS.Cli</Title>
-    <Version>0.0.1</Version>
+    <Version>0.0.2-beta</Version>
     <Authors>Morgan Kenyon</Authors>
     <Description>A Cli for compiling and running F# files into WebAssembly.</Description>
     <Summary>A Cli for compiling and running F# files into WebAssembly.</Summary>

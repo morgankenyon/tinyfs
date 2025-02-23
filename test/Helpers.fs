@@ -1,6 +1,10 @@
 ﻿module TinyFS.Test.Helpers
 
 open Wasmtime
+open FSharp.Compiler.CodeAnalysis
+
+//type TestResources =
+//    static member Checker = FSharpChecker.Create(keepAssemblyContents = true)
 
 let printWasm (bytes: byte list) =
     let stringRepresentation =
@@ -50,4 +54,10 @@ let runInt64FuncInt64 (funcName: string) (param1: int64) (wasmBytes: byte list) 
     let instance = buildInstance wasmBytes
 
     let func = instance.GetFunction<int64, int64>(funcName)
+    func.Invoke(param1)
+
+let runFloat64FuncFloat64 (funcName: string) (param1: float) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let func = instance.GetFunction<float, float>(funcName)
     func.Invoke(param1)

@@ -93,7 +93,7 @@ let getBlockType (typ: Types option) =
         | Int32 -> i32_VAL_TYPE
         | Int64 -> i64_VAL_TYPE
         //| F32 -> f32_VAL_TYPE
-        //| F64 -> f64_VAL_TYPE
+        | Float64 -> f64_VAL_TYPE
         | _ -> tinyfail (sprintf "Currently do not support a '%s' block type" (vall.ToString()))
 
 let getResultType typ =
@@ -158,16 +158,22 @@ let operatorToWasm (op: string) (typ: Types) =
     //comparison
     | FS_OP_EQUALITY, Int32 -> INSTR_i32_EQ
     | FS_OP_EQUALITY, Int64 -> INSTR_i64_EQ
+    | FS_OP_EQUALITY, Float64 -> INSTR_f64_EQ
     | FS_OP_INEQUALITY, Int32 -> INSTR_i32_NE
     | FS_OP_INEQUALITY, Int64 -> INSTR_i64_NE
+    | FS_OP_INEQUALITY, Float64 -> INSTR_f64_NE
     | FS_OP_LESSTHAN, Int32 -> INSTR_i32_LT_S
     | FS_OP_LESSTHAN, Int64 -> INSTR_i64_LT_S
+    | FS_OP_LESSTHAN, Float64 -> INSTR_f64_LT
     | FS_OP_LESSTHANOREQUAL, Int32 -> INSTR_i32_LE_S
     | FS_OP_LESSTHANOREQUAL, Int64 -> INSTR_i64_LE_S
+    | FS_OP_LESSTHANOREQUAL, Float64 -> INSTR_f64_LE
     | FS_OP_GREATERTHAN, Int32 -> INSTR_i32_GT_S
     | FS_OP_GREATERTHAN, Int64 -> INSTR_i64_GT_S
+    | FS_OP_GREATERTHAN, Float64 -> INSTR_f64_GT
     | FS_OP_GREATERTHANOREQUAL, Int32 -> INSTR_i32_GE_S
     | FS_OP_GREATERTHANOREQUAL, Int64 -> INSTR_i64_GE_S
+    | FS_OP_GREATERTHANOREQUAL, Float64 -> INSTR_f64_GE
     ////logic
     //| "and" -> INSTR_i32_AND
     //| "or" -> INSTR_i32_OR

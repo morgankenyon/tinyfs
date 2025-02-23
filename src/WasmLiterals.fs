@@ -144,6 +144,42 @@ module Instructions =
     let INSTR_i64_GE_U = 0x5Auy
 
     [<Literal>]
+    let INSTR_f32_EQ = 0x5Buy
+
+    [<Literal>]
+    let INSTR_f32_NE = 0x5Cuy
+
+    [<Literal>]
+    let INSTR_f32_LT = 0x5Duy
+
+    [<Literal>]
+    let INSTR_f32_GT = 0x5Euy
+
+    [<Literal>]
+    let INSTR_f32_LE = 0x5Fuy
+
+    [<Literal>]
+    let INSTR_f32_GE = 0x60uy
+
+    [<Literal>]
+    let INSTR_f64_EQ = 0x61uy
+
+    [<Literal>]
+    let INSTR_f64_NE = 0x62uy
+
+    [<Literal>]
+    let INSTR_f64_LT = 0x63uy
+
+    [<Literal>]
+    let INSTR_f64_GT = 0x64uy
+
+    [<Literal>]
+    let INSTR_f64_LE = 0x65uy
+
+    [<Literal>]
+    let INSTR_f64_GE = 0x66uy
+
+    [<Literal>]
     let INSTR_i32_ADD = 0x6Auy
 
     [<Literal>]
@@ -184,3 +220,15 @@ module Instructions =
 
     [<Literal>]
     let INSTR_i64_MOD_U = 0x82uy
+
+    [<Literal>]
+    let INSTR_f64_ADD = 0xA0uy
+
+    [<Literal>]
+    let INSTR_f64_SUB = 0xA1uy
+
+    [<Literal>]
+    let INSTR_f64_MUL = 0xA2uy
+
+    [<Literal>]
+    let INSTR_f64_DIV = 0xA3uy

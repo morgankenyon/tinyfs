@@ -25,6 +25,9 @@ let FS_INT = "Microsoft.FSharp.Core.int"
 let FS_BOOL = "Microsoft.FSharp.Core.bool"
 
 [<Literal>]
+let FS_FLOAT64 = "Microsoft.FSharp.Core.float"
+
+[<Literal>]
 let FS_OPERATOR = "Microsoft.FSharp.Core.Operators"
 
 [<Literal>]
@@ -65,6 +68,8 @@ type Types =
     | Int16
     | Int32
     | Int64
+    | Float32
+    | Float64
     | Bool
     | Unit
     | Any

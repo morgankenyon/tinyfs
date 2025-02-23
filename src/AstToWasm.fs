@@ -93,7 +93,7 @@ let getBlockType (typ: Types option) =
         | Int32 -> i32_VAL_TYPE
         | Int64 -> i64_VAL_TYPE
         //| F32 -> f32_VAL_TYPE
-        //| F64 -> f64_VAL_TYPE
+        | Float64 -> f64_VAL_TYPE
         | _ -> tinyfail (sprintf "Currently do not support a '%s' block type" (vall.ToString()))
 
 let getResultType typ =
@@ -103,6 +103,7 @@ let getResultType typ =
     | Types.Int16
     | Types.Int32 -> i32_VAL_TYPE
     | Types.Int64 -> i64_VAL_TYPE
+    | Types.Float64 -> f64_VAL_TYPE
     | _ -> tinyfail (sprintf "Currently does not support '%s' result type" (typ.ToString()))
 
 let getType (strType) =
@@ -112,6 +113,7 @@ let getType (strType) =
     | FS_INT
     | FS_INT32 -> Types.Int32
     | FS_INT64 -> Types.Int64
+    | FS_FLOAT64 -> Types.Float64
     | FS_BOOL -> Types.Bool
     | FS_UNIT -> Types.Unit
     | _ -> tinyfail (sprintf "'%s' is an unknown type" strType)
@@ -123,6 +125,7 @@ let getOperatorType typ =
     | Types.Int16
     | Types.Int32 -> Types.Int32
     | Types.Int64 -> Types.Int64
+    | Types.Float64 -> Types.Float64
     | _ -> tinyfail (sprintf "Currently does not support '%s' operator type" (typ.ToString()))
 
 let getOperatorTypeFromArgs (arg1: FSharpExpr) (arg2: FSharpExpr) =
@@ -140,27 +143,37 @@ let operatorToWasm (op: string) (typ: Types) =
     //arithmetic
     | FS_OP_ADDITION, Int32 -> INSTR_i32_ADD
     | FS_OP_ADDITION, Int64 -> INSTR_i64_ADD
+    | FS_OP_ADDITION, Float64 -> INSTR_f64_ADD
     | FS_OP_SUBTRACTION, Int32 -> INSTR_i32_SUB
     | FS_OP_SUBTRACTION, Int64 -> INSTR_i64_SUB
+    | FS_OP_SUBTRACTION, Float64 -> INSTR_f64_SUB
     | FS_OP_MULTIPLY, Int32 -> INSTR_i32_MUL
     | FS_OP_MULTIPLY, Int64 -> INSTR_i64_MUL
+    | FS_OP_MULTIPLY, Float64 -> INSTR_f64_MUL
     | FS_OP_DIVISION, Int32 -> INSTR_i32_DIV_S
     | FS_OP_DIVISION, Int64 -> INSTR_i64_DIV_S
+    | FS_OP_DIVISION, Float64 -> INSTR_f64_DIV
     | FS_OP_MODULUS, Int32 -> INSTR_i32_MOD_S
     | FS_OP_MODULUS, Int64 -> INSTR_i64_MOD_S
     //comparison
     | FS_OP_EQUALITY, Int32 -> INSTR_i32_EQ
     | FS_OP_EQUALITY, Int64 -> INSTR_i64_EQ
+    | FS_OP_EQUALITY, Float64 -> INSTR_f64_EQ
     | FS_OP_INEQUALITY, Int32 -> INSTR_i32_NE
     | FS_OP_INEQUALITY, Int64 -> INSTR_i64_NE
+    | FS_OP_INEQUALITY, Float64 -> INSTR_f64_NE
     | FS_OP_LESSTHAN, Int32 -> INSTR_i32_LT_S
     | FS_OP_LESSTHAN, Int64 -> INSTR_i64_LT_S
+    | FS_OP_LESSTHAN, Float64 -> INSTR_f64_LT
     | FS_OP_LESSTHANOREQUAL, Int32 -> INSTR_i32_LE_S
     | FS_OP_LESSTHANOREQUAL, Int64 -> INSTR_i64_LE_S
+    | FS_OP_LESSTHANOREQUAL, Float64 -> INSTR_f64_LE
     | FS_OP_GREATERTHAN, Int32 -> INSTR_i32_GT_S
     | FS_OP_GREATERTHAN, Int64 -> INSTR_i64_GT_S
+    | FS_OP_GREATERTHAN, Float64 -> INSTR_f64_GT
     | FS_OP_GREATERTHANOREQUAL, Int32 -> INSTR_i32_GE_S
     | FS_OP_GREATERTHANOREQUAL, Int64 -> INSTR_i64_GE_S
+    | FS_OP_GREATERTHANOREQUAL, Float64 -> INSTR_f64_GE
     ////logic
     //| "and" -> INSTR_i32_AND
     //| "or" -> INSTR_i32_OR
@@ -321,6 +334,12 @@ let rec exprToWasm
             match convertInt64 value with
             | Some vall -> (Types.Int64, (appendSinList i64_CONST (i64 vall)))
             | None -> tinyfail (sprintf "Cannot convert '%s' to Int64" (value.ToString()))
+        | Types.Float64 ->
+            match convertFloat64 value with
+            | Some vall ->
+                let floatBytes = BitConverter.GetBytes(vall) |> Array.toList
+                (Types.Float64, (appendSinList f64_CONST floatBytes))
+            | None -> tinyfail (sprintf "Cannot convert '%s' to Float64" (value.ToString()))
         | Types.Bool ->
             match convertBool value with
             | Some vall ->

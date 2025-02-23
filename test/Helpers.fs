@@ -1,10 +1,6 @@
 ﻿module TinyFS.Test.Helpers
 
 open Wasmtime
-open FSharp.Compiler.CodeAnalysis
-
-//type TestResources =
-//    static member Checker = FSharpChecker.Create(keepAssemblyContents = true)
 
 let printWasm (bytes: byte list) =
     let stringRepresentation =

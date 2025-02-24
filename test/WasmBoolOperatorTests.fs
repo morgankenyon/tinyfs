@@ -172,6 +172,46 @@ let main () = 0
     response.Should().Be(expected)
 
 [<Theory>]
+[<InlineData("y > 0.0f", 3.0f, 10.0f)>]
+[<InlineData("y > 0.0f", -3.0f, -10.0f)>]
+[<InlineData("y < 0.0f", 3.0f, -10.0f)>]
+[<InlineData("y < 0.0f", -3.0f, 10.0f)>]
+[<InlineData("y = 3.0f", 3.0f, 10.0f)>]
+[<InlineData("y = 3.0f", -3.0f, -10.0f)>]
+[<InlineData("y = 3.0f", 6.0f, -10.0f)>]
+[<InlineData("y <> 3.0f", 3.0f, -10.0f)>]
+[<InlineData("y <> 3.0f", -3.0f, 10.0f)>]
+[<InlineData("y <> 3.0f", 6.0f, 10.0f)>]
+[<InlineData("y <= 3.0f", 3.0f, 10.0f)>]
+[<InlineData("y <= 3.0f", -3.0f, 10.0f)>]
+[<InlineData("y <= 3.0f", 6.0f, -10.0f)>]
+[<InlineData("y >= 3.0f", 3.0f, 10.0f)>]
+[<InlineData("y >= 3.0f", -3.0f, -10.0f)>]
+[<InlineData("y >= 3.0f", 6.0f, 10.0f)>]
+let ``Can support float32 boolean operator expressions`` expr param expected =
+    let input =
+        $"""module Test
+
+let x (y: float32) =
+    let z =
+        if {expr} then
+            10.0f
+        else
+            -10.0f
+    z
+
+let main () = 0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFloat32FuncFloat32 "x" param
+    response.Should().Be(expected)
+
+[<Theory>]
 [<InlineData("y > 0.0", 3.0, 10.0)>]
 [<InlineData("y > 0.0", -3.0, -10.0)>]
 [<InlineData("y < 0.0", 3.0, -10.0)>]
@@ -457,6 +497,118 @@ let main () =
 
     let response = wasmBytes |> runFuncInt64Return "main"
     response.Should().Be(10L)
+
+[<Theory>]
+[<InlineData("0.0f", "1.0f", "n = 0.0f && m = 1f", 10.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 1.0f && m = 1f", 20.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 0.0f && m = 0f", 20.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 1.0f && m = 0f", 20.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 0.0f || m = 1f", 10.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 1.0f || m = 1f", 10.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 0.0f || m = 0f", 10.0f)>]
+[<InlineData("0.0f", "1.0f", "n = 1.0f || m = 0f", 20.0f)>]
+let ``Can support float32 boolean expressions`` nValue mValue expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let n: float32 = {nValue}
+    let m: float32 = {mValue}
+    if {expr} then
+        10.0f
+    else
+        20.0f
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat32Return "main"
+    response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support complicated float32 boolean expression`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num1 = 1.0f
+    let num2 = 2.0f
+    let num3 = 3.0f
+    let num4 = 4.0f
+    let num5 = 5.0f
+    let num6 = 6.0f
+    if num1 = 1.0f && num2 = 2.0f && num3 = 3.0f && num4 > 2.0f && (num5 < 10.0f || num6 <= 6.0f) then
+        10.0f
+    else
+        20.0f
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat32Return "main"
+    response.Should().Be(10.0f)
+
+[<Theory>]
+[<InlineData("0.0", "1.0", "n = 0.0 && m = 1.0", 10.0)>]
+[<InlineData("0.0", "1.0", "n = 1.0 && m = 1.0", 20.0)>]
+[<InlineData("0.0", "1.0", "n = 0.0 && m = 0.0", 20.0)>]
+[<InlineData("0.0", "1.0", "n = 1.0 && m = 0.0", 20.0)>]
+[<InlineData("0.0", "1.0", "n = 0.0 || m = 1.0", 10.0)>]
+[<InlineData("0.0", "1.0", "n = 1.0 || m = 1.0", 10.0)>]
+[<InlineData("0.0", "1.0", "n = 0.0 || m = 0.0", 10.0)>]
+[<InlineData("0.0", "1.0", "n = 1.0 || m = 0.0", 20.0)>]
+let ``Can support float64 boolean expressions`` nValue mValue expr expected =
+    let input =
+        $"""module Test
+
+let main () =
+    let n: float = {nValue}
+    let m: float = {mValue}
+    if {expr} then
+        10.0
+    else
+        20.0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat64Return "main"
+    response.Should().Be(expected)
+
+[<Fact>]
+let ``Can support complicated float64 boolean expression`` () =
+    let input =
+        $"""module Test
+
+let main () =
+    let num1 = 1.0
+    let num2 = 2.0
+    let num3 = 3.0
+    let num4 = 4.0
+    let num5 = 5.0
+    let num6 = 6.0
+    if num1 = 1.0 && num2 = 2.0 && num3 = 3.0 && num4 > 2.0 && (num5 < 10.0 || num6 <= 6.0) then
+        10.0
+    else
+        20.0
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat64Return "main"
+    response.Should().Be(10.0)
 
 [<Fact>]
 let ``Can support boolean types`` () =

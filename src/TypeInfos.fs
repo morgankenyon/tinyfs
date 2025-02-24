@@ -25,6 +25,9 @@ let FS_INT = "Microsoft.FSharp.Core.int"
 let FS_BOOL = "Microsoft.FSharp.Core.bool"
 
 [<Literal>]
+let FS_FLOAT32 = "Microsoft.FSharp.Core.float32"
+
+[<Literal>]
 let FS_FLOAT64 = "Microsoft.FSharp.Core.float"
 
 [<Literal>]

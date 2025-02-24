@@ -41,6 +41,11 @@ let convertInt64 (o: obj) =
     | true, int -> Some int
     | _ -> None
 
+let convertFloat32 (o: obj) =
+    match System.Single.TryParse(o.ToString()) with
+    | true, flt -> Some flt
+    | _ -> None
+
 let convertFloat64 (o: obj) =
     match System.Double.TryParse(o.ToString()) with
     | true, flt -> Some flt

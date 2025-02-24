@@ -132,6 +132,35 @@ let main () = {expr}
     response.Should().Be(expected)
 
 [<Theory>]
+[<InlineData("1.0f", 1.0f)>]
+[<InlineData("1.0f + 3.5f", 4.5f)>]
+[<InlineData("1.0f + 3.0f + 2.3f", 6.3f)>]
+[<InlineData("1.0f - 3.0f", -2.0f)>]
+[<InlineData("10.0f / 2.5f", 4.0f)>]
+[<InlineData("11.0f / 2.0f", 5.5f)>]
+[<InlineData("14.0f / 5.0f", 2.8f)>]
+//[<InlineData("11.0 % 2.0", 1.0)>] //don't know about modulo
+//[<InlineData("14.0 % 5.0", 4.0)>] //don't know about modulo
+[<InlineData("10.0f * 15.5f", 155.0f)>]
+[<InlineData("10.0f * 15.0f + 10.0f", 160.0f)>]
+[<InlineData("10.0f * (15.0f + 10.0f)", 250.0f)>]
+let ``Can support float32 expressions`` expr expected =
+    let input =
+        $"""
+module Test
+
+let main () = {expr}
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncFloat32Return "main"
+    response.Should().Be(expected)
+
+[<Theory>]
 [<InlineData("1.0", 1.0)>]
 [<InlineData("1.0 + 3.5", 4.5)>]
 [<InlineData("1.0 + 3.0 + 2.3", 6.3)>]

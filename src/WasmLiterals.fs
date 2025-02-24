@@ -1,5 +1,6 @@
 ﻿module TinyFS.Core.WasmLiterals
 
+//https://webassembly.github.io/spec/core/appendix/index-instructions.html
 module Section =
     [<Literal>]
     let SECTION_ID_TYPE = 0x1uy
@@ -220,6 +221,18 @@ module Instructions =
 
     [<Literal>]
     let INSTR_i64_MOD_U = 0x82uy
+
+    [<Literal>]
+    let INSTR_f32_ADD = 0x92uy
+
+    [<Literal>]
+    let INSTR_f32_SUB = 0x93uy
+
+    [<Literal>]
+    let INSTR_f32_MUL = 0x94uy
+
+    [<Literal>]
+    let INSTR_f32_DIV = 0x95uy
 
     [<Literal>]
     let INSTR_f64_ADD = 0xA0uy

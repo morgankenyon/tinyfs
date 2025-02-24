@@ -28,16 +28,22 @@ let runFuncInt32Return (funcName: string) (wasmBytes: byte list) =
     let func = instance.GetFunction<int32>(funcName)
     func.Invoke()
 
+let runFuncInt64Return (funcName: string) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let func = instance.GetFunction<int64>(funcName)
+    func.Invoke()
+
 let runFuncFloat64Return (funcName: string) (wasmBytes: byte list) =
     let instance = buildInstance wasmBytes
 
     let func = instance.GetFunction<float>(funcName)
     func.Invoke()
 
-let runFuncInt64Return (funcName: string) (wasmBytes: byte list) =
+let runFuncFloat32Return (funcName: string) (wasmBytes: byte list) =
     let instance = buildInstance wasmBytes
 
-    let func = instance.GetFunction<int64>(funcName)
+    let func = instance.GetFunction<float32>(funcName)
     func.Invoke()
 
 let runInt32FuncInt32 (funcName: string) (param1: int32) (wasmBytes: byte list) =
@@ -50,6 +56,12 @@ let runInt64FuncInt64 (funcName: string) (param1: int64) (wasmBytes: byte list) 
     let instance = buildInstance wasmBytes
 
     let func = instance.GetFunction<int64, int64>(funcName)
+    func.Invoke(param1)
+
+let runFloat32FuncFloat32 (funcName: string) (param1: float32) (wasmBytes: byte list) =
+    let instance = buildInstance wasmBytes
+
+    let func = instance.GetFunction<float32, float32>(funcName)
     func.Invoke(param1)
 
 let runFloat64FuncFloat64 (funcName: string) (param1: float) (wasmBytes: byte list) =

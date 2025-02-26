@@ -6,7 +6,17 @@ F# for WebAssembly.
 
 TinyFS is a F# to Wasm Compiler.
 
-Current status: Basic int32 arithmetic operators work. 
+Leveraging the [FSharp.Compiler.Service](https://www.nuget.org/packages/FSharp.Compiler.Service) nuget package to generate an Abstract Syntax Tree (AST). Then walking the AST to generate Wasm bytes.
+
+Current feature status:
+* Support for `int32`, `int64`, `float32`, `float64` and `bool` primitives
+* The basic mathematical operators (`+`, `-`, `*`, `/`, `%`) are supported
+  * `%` - modulo not supported by floating point primitives
+* The basic boolean operators (`=`, `<>`, `>`, `>=`, `<`, `<=`) are supported
+* Local parameters are supported, as well as mutable parameters.
+* `if/else` expression is supported
+  * No `elif` yet
+* `while...do`
 
 ## Installing as Nuget Tool
 
@@ -29,6 +39,7 @@ How to compile and use.
 * Run `tinyfs run <.wasm file>` to run the generated wasm
   * Can also run in any other wasm compliant runtime.
   * This leverages the [wasmtime nuget](https://www.nuget.org/packages/Wasmtime) package.
+* You can also use `tinyfs compile -r <.fs file>` to compile and run in one command.
 
 ## Alpha Notice
 
@@ -38,7 +49,7 @@ This is still alpha software, bugs are to be expected. The more complex the code
 
 ## Supported Syntax
 
-I don't think my overal goal is to get to 100%, but probably target the 20% of language features that cover 80% of use cases. The easier a language construct is able to be mapped into WebAssembly the more likely it is to be implemented.
+The easier a language construct is able to be mapped into WebAssembly the more likely it is to be implemented. I don't currently have any long term plans on what I'm planning on doing with this project.
 
 Below lists the following language features that are supported. 
 
@@ -60,15 +71,14 @@ Below lists the following language features that are supported.
 - [ ] `nativeint` - probably never
 - [ ] `unativeint` - probably never
 - [ ] `decimal`
-- [ ] `float32/single` (32 bit)
-- [ ] `float/double` (64 bit)
+- [x] `float32/single` (32 bit)
+- [x] `float/double` (64 bit)
 - [ ] `char`
 - [ ] `string`
 - [ ] `unit`
 
-* The next values to be supported will be:
-  * `float32`, `float64` and `bool`
-  * WebAssembly provides builtin support for `int32`, `int64`, `float32` and `float64`. Everything else comes extra.
+
+* WebAssembly provides builtin support for `int32`, `int64`, `float32` and `float64`. Everything else comes extra.
 
 
 ### Language Constructs

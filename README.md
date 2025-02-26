@@ -49,6 +49,10 @@ How to compile and use.
 
 This is still alpha software, bugs are to be expected. The more complex the code, the more likely it will break.
 
+By day I mainly program in C#, so I won't claim this library is optimized or error free. I mainly undertook this as a learning opportunity. There are currently no longer term plans for what this project will look like moving forward.
+
+Feel free to raise an issue if you see something could be improved.
+
 ## Supported Syntax
 
 The easier a language construct is able to be mapped into WebAssembly the more likely it is to be implemented. I don't currently have any long term plans on what I'm planning on doing with this project.

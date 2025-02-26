@@ -49,15 +49,15 @@ How to compile and use.
 
 This is still alpha software, bugs are to be expected. The more complex the code, the more likely it will break.
 
-By day I mainly program in C#, so I won't claim this library is optimized or error free. I mainly undertook this as a learning opportunity. There are currently no longer term plans for what this project will look like moving forward.
+By day I mainly program in C#, so I won't claim this library is optimized or error free. I mainly undertook this as a learning opportunity. There are currently no concrete plans for what this project will look like moving forward.
 
 Feel free to raise an issue if you see something could be improved.
 
 ## Supported Syntax
 
-The easier a language construct is able to be mapped into WebAssembly the more likely it is to be implemented. I don't currently have any long term plans on what I'm planning on doing with this project.
-
 Below lists the following language features that are supported. 
+
+The easier a language construct is able to be mapped into WebAssembly the more likely it is to be implemented.
 
 > Please see the [examples](./examples/) folder for examples of compileable F# syntax that is ready to be used.
 
@@ -83,9 +83,7 @@ Below lists the following language features that are supported.
 - [ ] `string`
 - [ ] `unit`
 
-
 * WebAssembly provides builtin support for `int32`, `int64`, `float32` and `float64`. Everything else comes extra.
-
 
 ### Language Constructs
 
@@ -100,7 +98,7 @@ Below lists the following language features that are supported.
 - [ ] collections
 - [ ] types
 - [ ] tuples, options, results
-- [ ] records and untions
+- [ ] records and unions
 - [ ] structs
 - [ ] object oriented programming (class, interfaces, etc)
 - [ ] reflection - probably never

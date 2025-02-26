@@ -1,5 +1,7 @@
 # TinyFS
 
+[![NuGet version](https://badge.fury.io/nu/TinyFS.Core.svg)](https://badge.fury.io/nu/TinyFS.Core) [![NuGet version](https://badge.fury.io/nu/TinyFS.Cli.svg)](https://badge.fury.io/nu/TinyFS.Cli)
+
 > Taking inspiration from the [tinygo](https://tinygo.org/) project.
 
 F# for WebAssembly. 
@@ -31,7 +33,7 @@ The fastest way to get started is to install via nuget tool.
 
 How to compile and use.
 
-* Write a valid .fs program containing the supported fs syntax listed below
+* Write a valid .fs program containing the supported fs syntax listed above/below
   * See examples to get started
   * Currently every *.fs file requires main function with a single unit parameter to exist
   * All code must be in a single .fs file, TinyFS does not currently support importing across files.

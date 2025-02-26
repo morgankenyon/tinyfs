@@ -24,7 +24,7 @@ Current feature status:
 
 The fastest way to get started is to install via nuget tool.
 
-* Install a flavor of .NET 9 from microsoft
+* Install a recent flavor of .NET 9 from microsoft (>9.0.102).
 * Run the following command: `dotnet tool install --global TinyFS.Cli`
   * To update if already installed: `dotnet tool update -g TinyFS.Cli`
 * You now have access to the `tinyfs` cli tool

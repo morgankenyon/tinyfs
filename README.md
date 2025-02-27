@@ -53,6 +53,21 @@ By day I mainly program in C#, so I won't claim this library is optimized or err
 
 Feel free to raise an issue if you see something could be improved.
 
+### TinyFS v. Blazor
+
+What makes TinyFS different than Blazor?
+
+These are the two primary differences at the moment:
+
+|  | Blazor | TinyFS |
+| --- | --- | --- |
+| Maturity | Supported in Production | Alpha Software |
+| Architectural Approach | Ship an entire dotnet runtime in Wasm | Compiles F# to Wasm concepts |
+
+Since this is a night and weekend project, there's roughly a 0% chance this library ends up competing with Blazor.
+
+So if you want to run something in dotnet in WebAssembly, choose Blazor. If you want to explore an interesting library, take a look at TinyFS.
+
 ## Supported Syntax
 
 Below lists the following language features that are supported. 

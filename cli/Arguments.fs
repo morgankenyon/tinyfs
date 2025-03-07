@@ -1,6 +1,7 @@
 ﻿module TinyFS.Cli.Arguments
 
 open Argu
+open System.IO
 open Wasmtime
 open TinyFS.Core
 
@@ -51,7 +52,7 @@ let compileFile (filename: string) =
     let name = System.IO.Path.GetFileNameWithoutExtension filename
     let fileInfo = new System.IO.FileInfo(filename)
     let directory = fileInfo.DirectoryName
-    let wasmFilename = $"{directory}\{name}.wasm"
+    let wasmFilename = $"{directory}{Path.DirectorySeparatorChar}{name}.wasm"
 
     let wasmBytes = EndToEnd.compile fileText |> List.toArray
 

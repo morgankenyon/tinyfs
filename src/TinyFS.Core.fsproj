@@ -5,7 +5,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>TinyFS.Core</PackageId>
     <Title>TinyFS.Core</Title>
-    <Version>0.0.2</Version>
+    <Version>0.0.3-beta</Version>
     <Authors>Morgan Kenyon</Authors>
     <Description>A F# to Wasm Compiler.</Description>
     <Summary>A F# to Wasm Compiler.</Summary>

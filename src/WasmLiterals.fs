@@ -9,6 +9,9 @@ module Section =
     let SECTION_ID_FUNCTION = 0x3uy
 
     [<Literal>]
+    let SECTION_ID_MEMORY = 0x5uy
+
+    [<Literal>]
     let SECTION_ID_EXPORT = 0x7uy
 
     [<Literal>]

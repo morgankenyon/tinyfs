@@ -1,4 +1,4 @@
-﻿module TinyFS.Test.WatToWasmTests
+﻿module TinyFS.Test.AstToWasmTests
 
 open Faqt
 open Faqt.Operators
@@ -119,6 +119,20 @@ let main () = 0
 
     let response = wasmBytes |> runFuncInt32Return "x"
     response.Should().Be(2342)
+
+[<Fact>]
+let ``Can run simple main`` () =
+    let input =
+        $"""module Test
+
+let main () = 233
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(233)
 
 [<Fact>]
 let ``Can generate local params symbols`` () =
@@ -536,7 +550,7 @@ let main () = 0
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    //printWasm wasmBytes
+    printWasm wasmBytes
 
     let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
     response.Should().Be(50)

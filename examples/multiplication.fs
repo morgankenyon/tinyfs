@@ -1,4 +1,3 @@
 module Test
 
-let main () =
-    10 * 2
+let main () = 10 * 2

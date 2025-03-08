@@ -47,6 +47,19 @@ let typesec (functypes: byte list list) =
 let funcsec (typeidxs: byte list list) =
     vecFlatten typeidxs |> section SECTION_ID_FUNCTION
 
+//Memory Section
+let memsec (mems: byte list) = vec mems |> section SECTION_ID_MEMORY
+
+let mem (memtype) = memtype
+
+let memtype (limits) = limits
+
+let limits_min (min: uint32) = appendSinList 0x00uy (u32 (min))
+
+let limits_minmax (min: uint32) (max: uint32) =
+    appendList (u32 (min)) (u32 (max))
+    |> appendSinList 0x01uy
+
 //Export section
 let exportdesc (idx: byte list) = appendSinList 0uy idx
 let name (s: string) = s |> stringToBytes |> vec
@@ -569,13 +582,6 @@ let buildModuleSymbolList (decls: FSharpImplementationFileDeclaration list) =
     moduleSymbolList
 
 let buildModule (functionDecls: WasmFuncBytes list) : byte list =
-    //creating code section
-    let codeSection =
-        functionDecls
-        |> List.map (fun f -> funcNested f.localBytes f.body)
-        |> List.map (fun f -> code f)
-        |> codesec
-
     //Creating type section
     let typeSection =
         functionDecls
@@ -588,15 +594,36 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
         |> List.mapi (fun i x -> i32 i)
         |> funcsec
 
+    //creating memory section
+    let limitsss = limits_min (1u)
+    let memType = memtype limitsss
+    let mmemm = mem memType
+    let memorySection = memsec mmemm
+    //let memorySection =
+    //    limits_min(1u)
+    //    |> memtype
+    //    |> mem
+    //    |> memsec
+
     //creating export section
     let exportSection =
         functionDecls
         |> List.mapi (fun i f -> export f.name (exportdesc (i32 (i))))
         |> exportsec
 
+    //TODO: figure out how to export memory???
+
+    //creating code section
+    let codeSection =
+        functionDecls
+        |> List.map (fun f -> funcNested f.localBytes f.body)
+        |> List.map (fun f -> code f)
+        |> codesec
+
     let bytes =
         modd [ typeSection
-               @ funcSection @ exportSection @ codeSection ]
+               @ funcSection
+                 @ memorySection @ exportSection @ codeSection ]
 
     bytes
 

@@ -1,4 +1,4 @@
 module Test
 
 let main () =
-    9 + 11
+    10 - 5

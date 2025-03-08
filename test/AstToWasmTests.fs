@@ -18,6 +18,42 @@ let getModuleSymbols (moduleSymbols: ModuleSymbolList) =
 
 
 
+[<Fact>]
+let ``Can run simple main function`` () =
+    let input =
+        $"""
+module Test
+
+let main () = 23
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(23)
+
+[<Fact>]
+let ``Can compile multiple functions`` () =
+    let input =
+        $"""
+module Test
+
+let second () = 24
+let third () = 24
+let main () = 23
+"""
+
+    let declarations = getDeclarations checker input
+    let wasmBytes = astToWasm declarations
+
+    //printWasm wasmBytes
+
+    let response = wasmBytes |> runFuncInt32Return "main"
+    response.Should().Be(23)
+
 [<Theory>]
 [<InlineData("1", 1)>]
 [<InlineData("1 + 3", 4)>]

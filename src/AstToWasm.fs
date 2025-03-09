@@ -7,10 +7,10 @@ open TinyFS.Core.WasmLiterals.Instructions
 open TinyFS.Core.WasmLiterals.Section
 open TinyFS.Core.Utils
 
-type MinMemoryHolder =
+type SingleMemoryHolder =
     {
         MemoryOp : byte
-        MinNum : byte list
+        Num : byte list
     }
 
 let magic () : byte list =
@@ -38,6 +38,9 @@ let vecFlatten (elements: byte list list) =
     let flattenedElements = elements |> List.collect id
     appendList normalizedSize flattenedElements
 
+let flatten (elements: byte list list) =
+    elements |> List.collect id
+
 //Type Section
 let functype (paramTypes: byte list, resultTypes: byte list) =
     let paramVec = vec paramTypes
@@ -54,7 +57,12 @@ let funcsec (typeidxs: byte list list) =
     vecFlatten typeidxs |> section SECTION_ID_FUNCTION
 
 //Memory Section
-let memsec (mems: byte list) = vec mems |> section SECTION_ID_MEMORY
+let memToList (mems: SingleMemoryHolder) =
+    [ [ mems.MemoryOp] @ mems.Num ]
+let memsec (mems: SingleMemoryHolder) = 
+    memToList mems
+    |> vecFlatten
+    |> section SECTION_ID_MEMORY
 
 let mem (memtype) = memtype
 
@@ -63,12 +71,21 @@ let memtype (limits) = limits
 let limits_min (min: uint32) = 
     {
         MemoryOp = 0x00uy
-        MinNum = u32 min
+        Num = u32 min
     }
 
 let limits_minmax (min: uint32) (max: uint32) =
     appendList (u32 (min)) (u32 (max))
     |> appendSinList 0x01uy
+
+let exportDescMem (idx: uint32) =
+    {
+        MemoryOp = 0x02uy
+        Num = u32 idx
+    }
+    |> memToList
+
+
 
 //Export section
 let exportdesc (idx: byte list) = appendSinList 0uy idx
@@ -76,6 +93,9 @@ let name (s: string) = s |> stringToBytes |> vec
 
 let export (s: string) (exportDesc: byte list) = appendList (name (s)) exportDesc
 
+let exportFlatten (s: string) (exportDesc: byte list list) =
+    flatten exportDesc
+    |> appendList (name (s)) 
 let exportsec (exports: byte list list) =
     vecFlatten exports |> section SECTION_ID_EXPORT
 
@@ -605,23 +625,21 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
         |> funcsec
 
     //creating memory section
-    let limitsss = limits_min (1u)
-    let memType = memtype limitsss
-    let mmemm = mem memType
-    let memorySection = memsec mmemm
-    //let memorySection =
-    //    limits_min(1u)
-    //    |> memtype
-    //    |> mem
-    //    |> memsec
+    let memorySection =
+       limits_min(1u)
+       |> memtype
+       |> mem
+       |> memsec
 
     //creating export section
-    let exportSection =
+    let exportDesc =
         functionDecls
         |> List.mapi (fun i f -> export f.name (exportdesc (i32 (i))))
-        |> exportsec
 
-    //TODO: figure out how to export memory???
+    let exportMemory = exportFlatten "$waferMemory" (exportDescMem(0u))
+    let exportTotal = appendListSin exportDesc exportMemory
+    let exportSection =
+        exportsec exportTotal
 
     //creating code section
     let codeSection =

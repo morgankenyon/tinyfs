@@ -43,3 +43,7 @@ node_modules/
 
 # Wasm example files
 examples/*.wasm
+
+
+.clj-kondo/
+.lsp/

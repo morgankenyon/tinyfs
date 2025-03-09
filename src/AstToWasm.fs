@@ -7,6 +7,12 @@ open TinyFS.Core.WasmLiterals.Instructions
 open TinyFS.Core.WasmLiterals.Section
 open TinyFS.Core.Utils
 
+type MinMemoryHolder =
+    {
+        MemoryOp : byte
+        MinNum : byte list
+    }
+
 let magic () : byte list =
     // [0x00, 0x61, 0x73, 0x6d]
     let nullChar = Convert.ToChar(0).ToString()
@@ -54,7 +60,11 @@ let mem (memtype) = memtype
 
 let memtype (limits) = limits
 
-let limits_min (min: uint32) = appendSinList 0x00uy (u32 (min))
+let limits_min (min: uint32) = 
+    {
+        MemoryOp = 0x00uy
+        MinNum = u32 min
+    }
 
 let limits_minmax (min: uint32) (max: uint32) =
     appendList (u32 (min)) (u32 (max))

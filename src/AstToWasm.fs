@@ -7,6 +7,12 @@ open TinyFS.Core.WasmLiterals.Instructions
 open TinyFS.Core.WasmLiterals.Section
 open TinyFS.Core.Utils
 
+type SingleMemoryHolder =
+    {
+        MemoryOp : byte
+        Num : byte list
+    }
+
 let magic () : byte list =
     // [0x00, 0x61, 0x73, 0x6d]
     let nullChar = Convert.ToChar(0).ToString()
@@ -32,6 +38,9 @@ let vecFlatten (elements: byte list list) =
     let flattenedElements = elements |> List.collect id
     appendList normalizedSize flattenedElements
 
+let flatten (elements: byte list list) =
+    elements |> List.collect id
+
 //Type Section
 let functype (paramTypes: byte list, resultTypes: byte list) =
     let paramVec = vec paramTypes
@@ -47,12 +56,49 @@ let typesec (functypes: byte list list) =
 let funcsec (typeidxs: byte list list) =
     vecFlatten typeidxs |> section SECTION_ID_FUNCTION
 
+//Memory Section
+let memToList (mems: SingleMemoryHolder) =
+    [ [ mems.MemoryOp] @ mems.Num ]
+let memsec (mems: SingleMemoryHolder) = 
+    memToList mems
+    |> vecFlatten
+    |> section SECTION_ID_MEMORY
+
+let mem (memtype) = memtype
+
+let memtype (limits) = limits
+
+let memarg (align: uint32) (offset: uint32) =
+    [ u32(align); u32(offset) ]
+
+let limits_min (min: uint32) = 
+    {
+        MemoryOp = 0x00uy
+        Num = u32 min
+    }
+
+let limits_minmax (min: uint32) (max: uint32) =
+    appendList (u32 (min)) (u32 (max))
+    |> appendSinList 0x01uy
+
+let exportDescMem (idx: uint32) =
+    {
+        MemoryOp = 0x02uy
+        Num = u32 idx
+    }
+    |> memToList
+
+
+
 //Export section
 let exportdesc (idx: byte list) = appendSinList 0uy idx
 let name (s: string) = s |> stringToBytes |> vec
 
 let export (s: string) (exportDesc: byte list) = appendList (name (s)) exportDesc
 
+let exportFlatten (s: string) (exportDesc: byte list list) =
+    flatten exportDesc
+    |> appendList (name (s)) 
 let exportsec (exports: byte list list) =
     vecFlatten exports |> section SECTION_ID_EXPORT
 
@@ -569,13 +615,6 @@ let buildModuleSymbolList (decls: FSharpImplementationFileDeclaration list) =
     moduleSymbolList
 
 let buildModule (functionDecls: WasmFuncBytes list) : byte list =
-    //creating code section
-    let codeSection =
-        functionDecls
-        |> List.map (fun f -> funcNested f.localBytes f.body)
-        |> List.map (fun f -> code f)
-        |> codesec
-
     //Creating type section
     let typeSection =
         functionDecls
@@ -588,15 +627,34 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
         |> List.mapi (fun i x -> i32 i)
         |> funcsec
 
+    //creating memory section
+    let memorySection =
+       limits_min(1u)
+       |> memtype
+       |> mem
+       |> memsec
+
     //creating export section
-    let exportSection =
+    let exportDesc =
         functionDecls
         |> List.mapi (fun i f -> export f.name (exportdesc (i32 (i))))
-        |> exportsec
+
+    let exportMemory = exportFlatten "tinyfsMemory" (exportDescMem(0u))
+    let exportTotal = appendListSin exportDesc exportMemory
+    let exportSection =
+        exportsec exportTotal
+
+    //creating code section
+    let codeSection =
+        functionDecls
+        |> List.map (fun f -> funcNested f.localBytes f.body)
+        |> List.map (fun f -> code f)
+        |> codesec
 
     let bytes =
         modd [ typeSection
-               @ funcSection @ exportSection @ codeSection ]
+               @ funcSection
+                 @ memorySection @ exportSection @ codeSection ]
 
     bytes
 

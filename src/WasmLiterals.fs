@@ -9,6 +9,9 @@ module Section =
     let SECTION_ID_FUNCTION = 0x3uy
 
     [<Literal>]
+    let SECTION_ID_MEMORY = 0x5uy
+
+    [<Literal>]
     let SECTION_ID_EXPORT = 0x7uy
 
     [<Literal>]
@@ -65,6 +68,18 @@ module Instructions =
 
     [<Literal>]
     let INSTR_LOCAL_TEE = 0x22uy
+
+    [<Literal>]
+    let INSTR_i32_LOAD = 0x28uy
+
+    [<Literal>]
+    let INSTR_i32_STORE = 0x36uy
+
+    [<Literal>]
+    let INSTR_MEMORY_SIZE = 0x3Fuy
+
+    [<Literal>]
+    let INSTR_MEMORY_GROW = 0x40uy
 
     [<Literal>]
     let EMPTY = 0x40uy

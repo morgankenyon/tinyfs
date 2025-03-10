@@ -131,6 +131,8 @@ let main () = 233
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
+    printWasm wasmBytes
+
     let response = wasmBytes |> runFuncInt32Return "main"
     response.Should().Be(233)
 
@@ -550,7 +552,7 @@ let main () = 0
     let declarations = getDeclarations checker input
     let wasmBytes = astToWasm declarations
 
-    printWasm wasmBytes
+    //printWasm wasmBytes
 
     let response = wasmBytes |> runInt32FuncInt32 "countTo" 50
     response.Should().Be(50)

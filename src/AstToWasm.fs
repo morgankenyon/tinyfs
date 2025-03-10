@@ -68,6 +68,9 @@ let mem (memtype) = memtype
 
 let memtype (limits) = limits
 
+let memarg (align: uint32) (offset: uint32) =
+    [ u32(align); u32(offset) ]
+
 let limits_min (min: uint32) = 
     {
         MemoryOp = 0x00uy
@@ -636,7 +639,7 @@ let buildModule (functionDecls: WasmFuncBytes list) : byte list =
         functionDecls
         |> List.mapi (fun i f -> export f.name (exportdesc (i32 (i))))
 
-    let exportMemory = exportFlatten "$waferMemory" (exportDescMem(0u))
+    let exportMemory = exportFlatten "tinyfsMemory" (exportDescMem(0u))
     let exportTotal = appendListSin exportDesc exportMemory
     let exportSection =
         exportsec exportTotal

@@ -70,6 +70,12 @@ module Instructions =
     let INSTR_LOCAL_TEE = 0x22uy
 
     [<Literal>]
+    let INSTR_i32_LOAD = 0x28uy
+
+    [<Literal>]
+    let INSTR_i32_STORE = 0x36uy
+
+    [<Literal>]
     let INSTR_MEMORY_SIZE = 0x3Fuy
 
     [<Literal>]

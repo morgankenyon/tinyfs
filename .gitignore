@@ -43,3 +43,8 @@ node_modules/
 
 # Wasm example files
 examples/*.wasm
+
+
+# Clojure ignore due to VS Code extensions
+.clj-kondo/
+.lsp/

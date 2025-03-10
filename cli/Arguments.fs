@@ -44,22 +44,30 @@ let runPrint print =
     printfn "%s" print
     Ok()
 
+let parseFsProjectFile (fileInfo: FileInfo) =
+    
+    []
+
 let compileFile (filename: string) =
     printfn "Compiling: %s" filename
 
-    let fileText = System.IO.File.ReadAllText filename
-
-    let name = System.IO.Path.GetFileNameWithoutExtension filename
     let fileInfo = new System.IO.FileInfo(filename)
-    let directory = fileInfo.DirectoryName
-    let wasmFilename = $"{directory}{Path.DirectorySeparatorChar}{name}.wasm"
+    if fileInfo.Extension = "fs" then
+        let fileText = System.IO.File.ReadAllText filename
 
-    let wasmBytes = EndToEnd.compile fileText |> List.toArray
+        let name = System.IO.Path.GetFileNameWithoutExtension filename
+        let directory = fileInfo.DirectoryName
+        let wasmFilename = $"{directory}{Path.DirectorySeparatorChar}{name}.wasm"
 
-    System.IO.File.WriteAllBytes(wasmFilename, wasmBytes)
-    printfn "Compiled to: %s" wasmFilename
+        let wasmBytes = EndToEnd.compile fileText |> List.toArray
 
-    wasmFilename
+        System.IO.File.WriteAllBytes(wasmFilename, wasmBytes)
+        printfn "Compiled to: %s" wasmFilename
+
+        wasmFilename
+    else
+        printfn "%s" "FS Proj baby"
+        "test"
 
 let runFile (filename: string) =
     printfn "Running: %s" filename

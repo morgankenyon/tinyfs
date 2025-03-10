@@ -15,6 +15,19 @@ let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     checker.ParseAndCheckProject(projOptions)
     |> Async.RunSynchronously
 
+let parseAndCheckProject (checker: FSharpChecker) (projectFilePath: string) =
+    // Get project options from the actual F# project file
+    let args: string array = [||]
+    let projectOptions = 
+        checker.GetProjectOptionsFromCommandLineArgs(projectFilePath, args) // projectFilePath args // GetProjectOptionsFromProjectFile(projectFilePath)
+        
+    // Parse and check the entire project
+    let projectResults = 
+        checker.ParseAndCheckProject(projectOptions)
+        |> Async.RunSynchronously
+        
+    projectResults
+
 let getDeclarations checker (input: string) =
     let checkProjectResults = parseAndCheckSingleFile checker input
     let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
@@ -31,3 +44,14 @@ let getDeclarations checker (input: string) =
         failwith msg
     else
         checkedFile.Declarations
+
+let getDeclarationsFromProject checker (projectFilePath: string) =
+    let results = parseAndCheckProject checker projectFilePath
+
+    // Now you can work with the full project results
+    // Example: get all the declarations in the project
+    for file in results.AssemblyContents.ImplementationFiles do
+        printfn "File: %s" file.FileName
+        for decl in file.Declarations do
+            // Process declarations
+            printfn "  Declaration: %A" decl.

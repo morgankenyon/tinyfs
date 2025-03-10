@@ -4,7 +4,18 @@ open FSharp.Compiler.CodeAnalysis
 open System.IO
 open FSharp.Compiler.Text
 
-let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
+let private includePrelude (input: string) =
+    let prelude =
+        "module TinyFS.Lib
+
+let ___mem = []
+
+let newInt32Array (n: int32) =
+    ()
+
+"
+    prelude + input
+let private parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     let file = Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".fsx")
     File.WriteAllText(file, input)
     // Get context representing a stand-alone (script) file
@@ -16,7 +27,10 @@ let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     |> Async.RunSynchronously
 
 let getDeclarations checker (input: string) =
-    let checkProjectResults = parseAndCheckSingleFile checker input
+    let source = includePrelude input
+    let checkProjectResults =
+        includePrelude source
+        |> parseAndCheckSingleFile checker
     let checkedFile = checkProjectResults.AssemblyContents.ImplementationFiles.[0]
 
     let mutable msg = ""

@@ -14,3 +14,4 @@ I fixed this by pulling in the FSharp.Compiler.Service dlls that Fable uses, sin
 * https://webassembly.github.io/wabt/demo/wat2wasm/
 * https://wasdk.github.io/wasmcodeexplorer/
 * https://webassembly.github.io/spec/core/appendix/index-instructions.html
+* https://github.com/vshymanskyy/awesome-wasm-tools/tree/main

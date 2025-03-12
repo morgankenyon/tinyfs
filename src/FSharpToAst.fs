@@ -15,9 +15,25 @@ let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     checker.ParseAndCheckProject(projOptions)
     |> Async.RunSynchronously
 
-let parseAndCheckProject (checker: FSharpChecker) (projectFilePath: string) =
+let sysLib nm =
+    let sysDir =
+        System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory()
+    let (++) a b = Path.Combine(a, b)
+    sysDir ++ nm + ".dll"
+
+let fsCorePath () =
+    "C:\Program Files\dotnet\sdk\9.0.200\FSharp\FSharp.Core.dll"
+
+let parseAndCheckProject (checker: FSharpChecker) (projectPath: string) (projectFilePath: string) =
     // Get project options from the actual F# project file
-    let args: string array = [||]
+    let dllName = Path.ChangeExtension(projectFilePath, ".dll")
+    let args: string array =
+        [| 
+           yield "--targetprofile:netcore"
+           yield "--target:library"
+           yield "--out:MyLibrary.dll"
+           yield $"{projectPath}/Library.fs"
+           |]
     let projectOptions = 
         checker.GetProjectOptionsFromCommandLineArgs(projectFilePath, args) // projectFilePath args // GetProjectOptionsFromProjectFile(projectFilePath)
         
@@ -45,13 +61,18 @@ let getDeclarations checker (input: string) =
     else
         checkedFile.Declarations
 
-let getDeclarationsFromProject checker (projectFilePath: string) =
-    let results = parseAndCheckProject checker projectFilePath
+let getDeclarationsFromProject checker (projectPath: string) (projectFilePath: string) =
+    let checkProjectResults = parseAndCheckProject checker projectPath projectFilePath
 
     // Now you can work with the full project results
     // Example: get all the declarations in the project
-    for file in results.AssemblyContents.ImplementationFiles do
-        printfn "File: %s" file.FileName
-        for decl in file.Declarations do
-            // Process declarations
-            printfn "  Declaration: %A" decl.
+    let declarations = 
+        checkProjectResults.AssemblyContents.ImplementationFiles
+        |> List.map (fun f -> f.Declarations) 
+        |> List.collect id
+
+    declarations
+    //for file in checkProjectResults.AssemblyContents.ImplementationFiles do
+    //    for decl in file.Declarations do
+    //        // Process declarations
+    //        printfn "  Declaration: %A" decl.

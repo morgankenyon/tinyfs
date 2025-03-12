@@ -30,6 +30,10 @@
 
   <ItemGroup>
     <PackageReference Include="FSharp.Compiler.Service" Version="43.9.201" />
+    <PackageReference Include="Ionide.ProjInfo" Version="0.70.2" />
+    <PackageReference Include="Ionide.ProjInfo.FCS" Version="0.70.2" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.2.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Frameworks" Version="6.2.1" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

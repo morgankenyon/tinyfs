@@ -1,8 +1,10 @@
 ﻿module TinyFS.Core.FSharpToAst
 
 open FSharp.Compiler.CodeAnalysis
-open System.IO
 open FSharp.Compiler.Text
+open Ionide.ProjInfo
+
+open System.IO
 
 let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     let file = Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".fsx")
@@ -25,16 +27,20 @@ let fsCorePath () =
     "C:\Program Files\dotnet\sdk\9.0.200\FSharp\FSharp.Core.dll"
 
 let parseAndCheckProject (checker: FSharpChecker) (projectPath: string) (projectFilePath: string) =
-    // Get project options from the actual F# project file
-    let dllName = Path.ChangeExtension(projectFilePath, ".dll")
+    // let file = new System.IO.FileInfo(projectPath);
+    // file.Directory.Create(); 
+    let projectDirectory: DirectoryInfo = Directory.CreateDirectory(projectPath);
+    let toolsPath = Init.init projectDirectory None
+    let defaultLoader: IWorkspaceLoader = WorkspaceLoader.Create(toolsPath, [])
+    let projectOptions = defaultLoader.LoadProjects([ projectPath ]) |> Seq.toArray
+    let fcsProjectOptions = 
+        FCS.mapManyOptions projectOptions
+        |> Seq.toList
     let args: string array =
-        [| 
-           yield "--targetprofile:netcore"
-           yield "--target:library"
-           yield "--out:MyLibrary.dll"
+        [|
            yield $"{projectPath}/Library.fs"
            |]
-    let projectOptions = 
+    let projectOptions =
         checker.GetProjectOptionsFromCommandLineArgs(projectFilePath, args) // projectFilePath args // GetProjectOptionsFromProjectFile(projectFilePath)
         
     // Parse and check the entire project

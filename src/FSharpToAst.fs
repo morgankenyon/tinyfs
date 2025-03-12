@@ -1,8 +1,10 @@
 ﻿module TinyFS.Core.FSharpToAst
 
 open FSharp.Compiler.CodeAnalysis
-open System.IO
 open FSharp.Compiler.Text
+open Ionide.ProjInfo
+
+open System.IO
 
 let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
     let file = Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".fsx")
@@ -14,6 +16,39 @@ let parseAndCheckSingleFile (checker: FSharpChecker) (input: string) =
 
     checker.ParseAndCheckProject(projOptions)
     |> Async.RunSynchronously
+
+let sysLib nm =
+    let sysDir =
+        System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory()
+    let (++) a b = Path.Combine(a, b)
+    sysDir ++ nm + ".dll"
+
+let fsCorePath () =
+    "C:\Program Files\dotnet\sdk\9.0.200\FSharp\FSharp.Core.dll"
+
+let parseAndCheckProject (checker: FSharpChecker) (projectPath: string) (projectFilePath: string) =
+    // let file = new System.IO.FileInfo(projectPath);
+    // file.Directory.Create(); 
+    let projectDirectory: DirectoryInfo = Directory.CreateDirectory(projectPath);
+    let toolsPath = Init.init projectDirectory None
+    let defaultLoader: IWorkspaceLoader = WorkspaceLoader.Create(toolsPath, [])
+    let projectOptions = defaultLoader.LoadProjects([ projectPath ]) |> Seq.toArray
+    let fcsProjectOptions = 
+        FCS.mapManyOptions projectOptions
+        |> Seq.toList
+    let args: string array =
+        [|
+           yield $"{projectPath}/Library.fs"
+           |]
+    let projectOptions =
+        checker.GetProjectOptionsFromCommandLineArgs(projectFilePath, args) // projectFilePath args // GetProjectOptionsFromProjectFile(projectFilePath)
+        
+    // Parse and check the entire project
+    let projectResults = 
+        checker.ParseAndCheckProject(projectOptions)
+        |> Async.RunSynchronously
+        
+    projectResults
 
 let getDeclarations checker (input: string) =
     let checkProjectResults = parseAndCheckSingleFile checker input
@@ -31,3 +66,19 @@ let getDeclarations checker (input: string) =
         failwith msg
     else
         checkedFile.Declarations
+
+let getDeclarationsFromProject checker (projectPath: string) (projectFilePath: string) =
+    let checkProjectResults = parseAndCheckProject checker projectPath projectFilePath
+
+    // Now you can work with the full project results
+    // Example: get all the declarations in the project
+    let declarations = 
+        checkProjectResults.AssemblyContents.ImplementationFiles
+        |> List.map (fun f -> f.Declarations) 
+        |> List.collect id
+
+    declarations
+    //for file in checkProjectResults.AssemblyContents.ImplementationFiles do
+    //    for decl in file.Declarations do
+    //        // Process declarations
+    //        printfn "  Declaration: %A" decl.

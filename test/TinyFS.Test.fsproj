@@ -7,6 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="tinyfs_testprojects\HelloWorld\Library.fs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <None Include="tinyfs_testprojects\.gitignore" />
+    <None Include="tinyfs_testprojects\HelloWorld\HelloWorld.fsproj">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="tinyfs_testprojects\LICENSE" />
+    <None Include="tinyfs_testprojects\README.md" />
     <Compile Include="Helpers.fs" />
     <Compile Include="Leb128Tests.fs" />
     <Compile Include="FSharpToAstTests.fs" />
@@ -15,6 +24,8 @@
     <Compile Include="AstToWasmTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+
+  <ItemGroup />
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
